@@ -43,6 +43,8 @@ class CBCE(base.Wrapper, base.Classifier):
                 # Sample buffer contains the two positive samples, hence the -1
                 self._class_priors[y] = 1 / (buffer_len - 1)
 
+                del self._sample_buffer[y]
+
         self.__updateCBModels(x, y, **kwargs)
 
         return self
