@@ -26,24 +26,26 @@ class CBCE(base.Wrapper, base.Classifier):
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
+                self._class_priors[y] = 0
             else:
                 # Second sample arrived, initilize model
                 buffer_len = len(self._sample_buffer[y])
 
-                model = self.classifier.clone()
+                model: base.Classifier = self.classifier.clone()
                 labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
-                for x, y in zip(self._sample_buffer[y], labels):
-                    model.learn_one(x, y, **kwargs)
+                for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
+                    model.learn_one(buffered_x, buffered_y, **kwargs)
                     
                 self.classifiers[y] = model
-
-                #TODO: class reoccurrence
-                #TODO: class disappearance
 
                 # Sample buffer contains the two positive samples, hence the -1
                 self._class_priors[y] = 1 / (buffer_len - 1)
 
+                # Stop buffering
                 del self._sample_buffer[y]
+
+        #TODO: class reoccurrence
+        #TODO: class disappearance
 
         self.__updateCBModels(x, y, **kwargs)
 
@@ -61,9 +63,14 @@ class CBCE(base.Wrapper, base.Classifier):
                 if random.random() < p:
                     model.learn_one(x, -1, **kwargs)
 
+    def predict_proba_one(self, x: dict, **kwargs) -> dict[base.typing.ClfTarget, float]:
+        y_pred = {}
 
-    def predict_proba_one(self, x: dict) -> dict[base.typing.ClfTarget, float]:
-        raise NotImplementedError()
+        for label, model in self.classifiers.items():
+            y_pred[label] = model.predict_proba_one(x, **kwargs)[1]
 
-    def predict_one(self, x: dict) -> base.typing.ClfTarget | None:
-        raise NotImplementedError()    
+        total = sum(y_pred.values())
+        
+        if total:
+            return {label: score / total for label, score in y_pred.items()}
+        return {label: 1 / len(y_pred) for label in y_pred.keys()}
