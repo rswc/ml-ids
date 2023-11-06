@@ -1,8 +1,8 @@
-from river import datasets
-from cicids import CICIDS2017
-from tqdm import tqdm
+# from cicids import CICIDS2017
+from river.datasets.sms_spam import SMSSpam
 
-dataset = CICIDS2017()
+# dataset = CICIDS2017()
+dataset = SMSSpam()
 print(dataset)
 
 x, y = next(iter(dataset))
@@ -10,26 +10,12 @@ print(x)
 print(y)
 
 from river import tree
+from river import metrics
+from river.metrics.base import Metrics
+from framework import ExperimentRunner
 
 model = tree.HoeffdingTreeClassifier()
-print(model.predict_one(x))
 
+runner = ExperimentRunner(model, dataset, Metrics([metrics.Precision(), metrics.Recall()]), "./out")
 
-print(model.learn_one(x, y))
-print(model.predict_proba_one(x))
-
-
-from river import metrics
-metric = metrics.ClassificationReport()
-
-for x, y in tqdm(dataset):
-    y_pred = model.predict_one(x)
-    model.learn_one(x, y)
-    if y_pred is not None:
-        metric.update(y, y_pred)
-
-print(metric)
-
-from river import evaluate
-res = evaluate.progressive_val_score(dataset, model, metric)
-print(res)
+runner.run()
