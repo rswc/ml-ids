@@ -34,7 +34,7 @@ class ExperimentRunner:
         print("Starting experiment:", self._id)
 
         with open(self._meta_path, "x") as file_meta:
-            json.dump(self._parameters, file_meta, default=lambda o: repr(o))
+            json.dump(self._parameters, file_meta, default=lambda o: repr(o), indent=4)
 
         print("Metadata available at:", os.path.abspath(self._meta_path))
         print("Metrics log available at:", os.path.abspath(self._metrics_path))
