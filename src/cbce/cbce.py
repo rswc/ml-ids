@@ -24,11 +24,11 @@ class CBCE(base.Wrapper, base.Classifier):
         for label in self._sample_buffer:
             self._sample_buffer[label].append(x)
 
-        if y not in self.classifiers and y not in self.inactive_classifiers:
+        # Class emergence
+        if y not in self._class_priors:
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
-                self._class_priors[y] = 0
             else:
                 # Second sample arrived, initilize model
                 buffer_len = len(self._sample_buffer[y])
@@ -45,13 +45,30 @@ class CBCE(base.Wrapper, base.Classifier):
 
                 # Stop buffering
                 del self._sample_buffer[y]
+        
+        # Class reoccurrence
+        elif self._class_priors[y] == 0:
+            if y not in self._sample_buffer:
+                # First sample arrived, start buffering
+                self._sample_buffer[y] = [x]
 
-        #TODO: class reoccurrence
+                # Activate classifier
+                self.classifiers[y] = self.inactive_classifiers[y]
+                del self.inactive_classifiers[y]
+            else:
+                # Second sample arrived, initilize model
+                buffer_len = len(self._sample_buffer[y])
+
+                # Sample buffer contains the two positive samples, hence the -1
+                self._class_priors[y] = 1 / (buffer_len - 1)
+
+                # Stop buffering
+                del self._sample_buffer[y]
         
         # Class disappearance
         disappeared_labels = []
         for label, model in self.classifiers.items():
-            if self._class_priors[label] < self.disappearance_threshold:
+            if self._class_priors[label] < self.disappearance_threshold and label not in self._sample_buffer:
                 self.inactive_classifiers[label] = model
                 self._class_priors[label] = 0
                 disappeared_labels.append(label)

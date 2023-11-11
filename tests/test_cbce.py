@@ -81,7 +81,14 @@ class TestCBCE:
         assert model._class_priors["A"] == 0, "Provided wrong prior value for disappeared class"
         assert "A" not in model.predict_proba_one({"x": 9}), "Provided disappeared class during prediction"
 
-        model.learn_one({"x": 5}, "A")
+        DATA = [
+            ({"x": 1}, "A"),
+            ({"x": -2}, "B"),
+            ({"x": 2}, "A"),
+        ]
+
+        for x, y in DATA:
+            model.learn_one(x, y)
 
         assert model._class_priors["A"] > 0, "Provided wrong prior for reappeared class"
         assert "A" in model.predict_proba_one({"x": 9}), "Failed to provide reappeared class during prediction"
