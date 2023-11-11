@@ -22,7 +22,7 @@ class ClassSampler:
     
     EOC_STRATEGIES = ['raise', 'loop', 'none']
     
-    def __init__(self, label: str, samples: list, weight_func: callable, stream_t_start: int, n_samples: int | None = None, eoc_strategy: str = 'raise'):
+    def __init__(self, label: str, samples: list, weight_func: callable, stream_t_start: int = 0, n_samples: int | None = None, eoc_strategy: str = 'raise'):
 
         if eoc_strategy not in ClassSampler.EOC_STRATEGIES:
             raise ValueError(f"Invalid eoc_strategy: {eoc_strategy} - does not match {ClassSampler.EOC_STRATEGIES}")
