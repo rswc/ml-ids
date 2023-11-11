@@ -57,8 +57,8 @@ class CBCE(base.Wrapper, base.Classifier):
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
                 model.learn_one(x, 1, **kwargs)
             else:
-                self._class_priors[y] *= self.decay_factor
-                p = self._class_priors[y] / (1 - self._class_priors[y])
+                self._class_priors[label] *= self.decay_factor
+                p = self._class_priors[label] / (1 - self._class_priors[label])
 
                 if random.random() < p:
                     model.learn_one(x, -1, **kwargs)
