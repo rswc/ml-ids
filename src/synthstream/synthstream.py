@@ -7,16 +7,6 @@ class NoActiveSamplersError(Exception):
 class ActiveLabelDuplicateErorr(Exception):
     pass
 
-# TODO:
-# 1. Add random source for stream with possible Seed (do not affect global random state) 
-# 2. Use ClassSamplers as init list [cs1, cs2, cs3, ...], or via add_class_sampler()
-# 3. Track intervals - [start, end) - or simply "active" / "non-active" labels
-#      a) do not allow for class labels that are copy of one/another (?)
-#      b) allow (?) - how can we allow for "death" of class and "reapearance" (?)
-#          probably model weights? 0 if in intervals, 1 otherwise, etc?
-# 4. add some sort of "global stream state" -> fetch EGR values for every current class in stream
-#   will be useful for plotting values
-
 class SyntheticStream:
 
     def __init__(self, size: int = None, seed: int = None, init_csamplers: list[ClassSampler] = []):
@@ -76,6 +66,9 @@ class SyntheticStream:
             self._add_future_csampler(csampler)
     
     def next_state(self):
+        if self.t == self.n:
+            raise StopIteration
+        
         if len(self.active_samplers.items()) == 0:
             raise NoActiveSamplersError
         
@@ -112,3 +105,10 @@ class SyntheticStream:
                 
     def get_state(self):
         return self.curr_x, self.curr_y
+
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        self.next_state()
+        return self.get_state()
