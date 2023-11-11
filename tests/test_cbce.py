@@ -53,7 +53,8 @@ class TestCBCE:
 
     def test_class_disappearance(self):
         """
-        Classes which haven't been seen in a long time should be deactivated.
+        Classes which haven't been seen in a long time should be deactivated, and reactivated
+        once new samples belonging to them arrive.
         """
 
         model = CBCE(linear_model.LogisticRegression(), disappearance_threshold=0.9**100)
@@ -78,4 +79,9 @@ class TestCBCE:
             model.learn_one(x, y)
 
         assert model._class_priors["A"] == 0, "Provided wrong prior value for disappeared class"
-        assert "A" not in model.predict_proba_one({"x": -9}), "Provided disappeared class during prediction"
+        assert "A" not in model.predict_proba_one({"x": 9}), "Provided disappeared class during prediction"
+
+        model.learn_one({"x": 5}, "A")
+
+        assert model._class_priors["A"] > 0, "Provided wrong prior for reappeared class"
+        assert "A" in model.predict_proba_one({"x": 9}), "Failed to provide reappeared class during prediction"
