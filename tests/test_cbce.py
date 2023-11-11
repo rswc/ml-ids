@@ -51,4 +51,31 @@ class TestCBCE:
 
         assert model.predict_proba_one({"x": 6})["majority"] < 1.0
 
+    def test_class_disappearance(self):
+        """
+        Classes which haven't been seen in a long time should be deactivated.
+        """
 
+        model = CBCE(linear_model.LogisticRegression(), disappearance_threshold=0.9**100)
+
+        DATA = [
+            ({"x": 1}, "A"),
+            ({"x": 2}, "A"),
+            ({"x": 3}, "A"),
+            ({"x": -2}, "B"),
+            ({"x": -4}, "B"),
+            ({"x": -2}, "B"),
+        ]
+
+        for x, y in DATA:
+            model.learn_one(x, y)
+
+        assert model.predict_proba_one({"x": 9})["A"] > 0.5
+
+        DATA = [({"x": 2}, "B")] * 100
+
+        for x, y in DATA:
+            model.learn_one(x, y)
+
+        assert model._class_priors["A"] == 0
+        assert "A" not in model.predict_proba_one({"x": -9})
