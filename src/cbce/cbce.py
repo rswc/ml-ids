@@ -3,12 +3,14 @@ from river import base
 
 class CBCE(base.Wrapper, base.Classifier):
 
-    def __init__(self, classifier: base.Classifier, decay_factor: float = 0.9) -> None:
+    def __init__(self, classifier: base.Classifier, decay_factor: float = 0.9, disappearance_threshold = 1.7e-46) -> None:
         self.classifier = classifier
         self.classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
+        self.inactive_classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
         self._class_priors: dict[base.typing.ClfTarget, float] = {}
         self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
         self.decay_factor = decay_factor
+        self.disappearance_threshold = disappearance_threshold
 
     @property
     def _wrapped_model(self):
@@ -22,7 +24,7 @@ class CBCE(base.Wrapper, base.Classifier):
         for label in self._sample_buffer:
             self._sample_buffer[label].append(x)
 
-        if y not in self.classifiers:
+        if y not in self.classifiers and y not in self.inactive_classifiers:
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
@@ -45,7 +47,17 @@ class CBCE(base.Wrapper, base.Classifier):
                 del self._sample_buffer[y]
 
         #TODO: class reoccurrence
-        #TODO: class disappearance
+        
+        # Class disappearance
+        disappeared_labels = []
+        for label, model in self.classifiers.items():
+            if self._class_priors[label] < self.disappearance_threshold:
+                self.inactive_classifiers[label] = model
+                self._class_priors[label] = 0
+                disappeared_labels.append(label)
+            
+        for label in disappeared_labels:
+            del self.classifiers[label]
 
         self.__updateCBModels(x, y, **kwargs)
 
