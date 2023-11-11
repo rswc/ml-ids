@@ -21,8 +21,8 @@ class TestCBCE:
         for x, y in DATA:
             model.learn_one(x, y)
 
-        assert model.predict_one({"x": -7}) == "neg"
-        assert model.predict_one({"x": 7}) == "pos"
+        assert model.predict_one({"x": -7}) == "neg", "Misclassified negative sample"
+        assert model.predict_one({"x": 7}) == "pos", "Misclassified positive sample"
     
     def test_dont_activate_class_until_second_sample(self):
         """
@@ -45,11 +45,11 @@ class TestCBCE:
         for x, y in DATA:
             model.learn_one(x, y)
         
-        assert model.predict_proba_one({"x": 5})["majority"] + 1e-7 > 1
+        assert model.predict_proba_one({"x": 5})["majority"] + 1e-7 > 1, "Failed to predict majority class, despite no others being available"
 
         model.learn_one({"x": 6}, "B")
 
-        assert model.predict_proba_one({"x": 6})["majority"] < 1.0
+        assert model.predict_proba_one({"x": 6})["majority"] < 1.0, "Failed to adjust prediction after receiving second sample"
 
     def test_class_disappearance(self):
         """
@@ -70,12 +70,12 @@ class TestCBCE:
         for x, y in DATA:
             model.learn_one(x, y)
 
-        assert model.predict_proba_one({"x": 9})["A"] > 0.5
+        assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
 
         DATA = [({"x": 2}, "B")] * 100
 
         for x, y in DATA:
             model.learn_one(x, y)
 
-        assert model._class_priors["A"] == 0
-        assert "A" not in model.predict_proba_one({"x": -9})
+        assert model._class_priors["A"] == 0, "Provided wrong prior value for disappeared class"
+        assert "A" not in model.predict_proba_one({"x": -9}), "Provided disappeared class during prediction"
