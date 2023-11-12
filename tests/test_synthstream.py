@@ -1,5 +1,5 @@
 from synthstream.synthstream import SyntheticStream, NoActiveSamplersError
-from synthstream.csampler import ClassSampler
+from synthstream.csampler import ClassSampler, EndOfClassError
 import pytest
 
 class TestSyntheticStream:
@@ -56,7 +56,7 @@ class TestSyntheticStream:
         with pytest.raises(StopIteration):
             next(ss)
             
-    def test_synthstream_end_of_classsamplers(self):
+    def test_synthstream_end_raises_no_active_samplers_error(self):
         none_sampler = ClassSampler(
             label='None', samples=[], weight_func=lambda t: 1,
             n_samples=10, eoc_strategy='none'
@@ -71,10 +71,20 @@ class TestSyntheticStream:
         with pytest.raises(NoActiveSamplersError) as e:
             next(ss)
         
-    def test_class_sampler_with_raise_eoc_raises_exception(self):
-        raise_sampler = ClassSampler(
-            label = 'TEST', samples=[1] * 20, weight_func=lambda t: 1,
+    def test_raise_eoc_class_sampler_end_of_class_error(self):
+        # less class samples than in `n_samples` param
+        sampler_raise = ClassSampler(
+            label = 'TEST', samples=[1] * 3, weight_func=lambda t: 1,
+            n_samples=5, eoc_strategy='raise'
         )
+        ss = SyntheticStream(max_samples=5, seed=42, init_csamplers=[sampler_raise])
+        assert next(ss) == (1, 'TEST')
+        assert next(ss) == (1, 'TEST')
+        assert next(ss) == (1, 'TEST')
+        
+        with pytest.raises(EndOfClassError):
+            next(ss)
+
     
     def test_valid_class_probabilities_in_stream(self):
         FLOAT_EPS = 1e-9
@@ -91,6 +101,9 @@ class TestSyntheticStream:
         assert next(ss) == (1, 'A')
         assert abs(ss.class_probabilities['A'] - 1.0) < FLOAT_EPS 
         assert ss.class_probabilities['B'] < FLOAT_EPS
+        next(ss) 
+        assert abs(ss.class_probabilities['A'] - 1/3) < FLOAT_EPS
+        assert abs(ss.class_probabilities['B'] - 2/3) < FLOAT_EPS
 
         
 
