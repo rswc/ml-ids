@@ -1,6 +1,8 @@
-from synthstream.synthstream import SyntheticStream, NoActiveSamplersError
-from synthstream.csampler import ClassSampler, EndOfClassError
 import pytest
+from synthstream import (
+    SyntheticStream, NoActiveSamplersError, ActiveLabelDuplicateError,
+    ClassSampler, EndOfClassError
+)
 
 class TestSyntheticStream:
     
@@ -10,12 +12,12 @@ class TestSyntheticStream:
         
         cs1 = ClassSampler(
             label='A', samples=ex1, weight_func=lambda t: 1, 
-            stream_t_start=0, n_samples=2, eoc_strategy='raise'
+            stream_t_start=0, max_samples=2, eoc_strategy='raise'
         )
         
         cs2 = ClassSampler(
             label='B', samples=ex2, weight_func=lambda t: 2, 
-            stream_t_start=2, n_samples=500, eoc_strategy='loop'
+            stream_t_start=2, max_samples=500, eoc_strategy='loop'
         )
 
         ss = SyntheticStream(max_samples=None, seed=42, init_csamplers=[cs1, cs2])
@@ -29,7 +31,7 @@ class TestSyntheticStream:
     def test_stream_end_of_iteration(self): 
         none_sampler = ClassSampler(
             label='None', samples=[], weight_func=lambda t: 5, 
-            stream_t_start=0, n_samples=10, eoc_strategy='none'
+            stream_t_start=0, max_samples=10, eoc_strategy='none'
         )
         
         ss = SyntheticStream(max_samples=2, seed=42, init_csamplers=[none_sampler])
@@ -43,7 +45,7 @@ class TestSyntheticStream:
     def test_iterator_interface_correctness(self):
         none_sampler = ClassSampler(
             label='None', samples=[], weight_func=lambda t: 1, 
-            n_samples=20, eoc_strategy='none'
+            max_samples=20, eoc_strategy='none'
         )
         
         ss = SyntheticStream(max_samples=10, init_csamplers=[none_sampler])
@@ -59,7 +61,7 @@ class TestSyntheticStream:
     def test_synthstream_end_raises_no_active_samplers_error(self):
         none_sampler = ClassSampler(
             label='None', samples=[], weight_func=lambda t: 1,
-            n_samples=10, eoc_strategy='none'
+            max_samples=10, eoc_strategy='none'
         )
         
         ss = SyntheticStream(max_samples=20)
@@ -72,10 +74,10 @@ class TestSyntheticStream:
             next(ss)
         
     def test_raise_eoc_class_sampler_end_of_class_error(self):
-        # less class samples than in `n_samples` param
+        # less class samples than in `max_samples` param
         sampler_raise = ClassSampler(
             label = 'TEST', samples=[1] * 3, weight_func=lambda t: 1,
-            n_samples=5, eoc_strategy='raise'
+            max_samples=5, eoc_strategy='raise'
         )
         ss = SyntheticStream(max_samples=5, seed=42, init_csamplers=[sampler_raise])
         assert next(ss) == (1, 'TEST')
@@ -89,21 +91,48 @@ class TestSyntheticStream:
     def test_valid_class_probabilities_in_stream(self):
         FLOAT_EPS = 1e-9
         sampler_a = ClassSampler(
-            label = 'A', samples=[1] * 20, weight_func=lambda t: 10, n_samples=2
+            label = 'A', samples=[1] * 20, weight_func=lambda t: 10, max_samples=2
         )
         sampler_b = ClassSampler(
             label= 'B', samples=[2] * 20, weight_func=lambda t: 20,
-            stream_t_start=1, n_samples=1
+            stream_t_start=1, max_samples=1
         )
         
         ss = SyntheticStream(seed=42, init_csamplers=[sampler_a, sampler_b])
         assert ss.class_probabilities is None
         assert next(ss) == (1, 'A')
-        assert abs(ss.class_probabilities['A'] - 1.0) < FLOAT_EPS 
-        assert ss.class_probabilities['B'] < FLOAT_EPS
+        assert ss.class_probabilities['A'] == pytest.approx(1.0)
+        assert ss.class_probabilities['B'] == pytest.approx(0.0)
         next(ss) 
-        assert abs(ss.class_probabilities['A'] - 1/3) < FLOAT_EPS
-        assert abs(ss.class_probabilities['B'] - 2/3) < FLOAT_EPS
+        assert ss.class_probabilities['A'] == pytest.approx(1/3)
+        assert ss.class_probabilities['B'] == pytest.approx(2/3)
 
+    def test_duplicate_class_dont_raise_error(self):
+        sampler_a = ClassSampler(
+            label= 'A', samples=[1, 1], weight_func=lambda t: 1,
+            stream_t_start=0, max_samples=2
+        )
+        sampler_a2 = ClassSampler(
+            label= 'A', samples=[2, 2], weight_func=lambda t: 1,
+            stream_t_start=2, max_samples=2
+        )
+        ss = SyntheticStream(max_samples=4, seed=42, init_csamplers=[sampler_a, sampler_a2])
         
+        assert next(ss) == (1, 'A')
+        assert next(ss) == (1, 'A')
+        assert next(ss) == (2, 'A')
+        assert next(ss) == (2, 'A')
+
+    def test_no_weight_probability_sum_raises_value_error(self):
+        sampler_a = ClassSampler(
+            label= 'ZeroProb', samples=[1], weight_func=lambda t: 0,
+            max_samples=1
+        )
+        ss = SyntheticStream(max_samples=1, seed=42)
+        ss.add_csampler(sampler_a)
+        
+        with pytest.raises(ValueError) as e:
+            next(ss)
+
+
 

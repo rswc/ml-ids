@@ -1,11 +1,12 @@
-from .synthstream import SyntheticStream
-from .csampler import ClassSampler, EndOfClassError, EndOfClassSamples
+from .synthstream import SyntheticStream, NoActiveSamplersError, ActiveLabelDuplicateError
+from .csampler import ClassSampler, EndOfClassError
 
 __all__ = [
     # synthstream
     "SyntheticStream", 
+    "NoActiveSamplersError",
+    "ActiveLabelDuplicateError",
     # csampler 
     "ClassSampler",
-    "EndOfClassSamples",
     "EndOfClassError",
 ]

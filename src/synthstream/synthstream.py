@@ -1,10 +1,10 @@
 from random import Random
-from .csampler import ClassSampler, EndOfClassSamples
+from .csampler import ClassSampler
 
 class NoActiveSamplersError(Exception):
     pass
 
-class ActiveLabelDuplicateErorr(Exception):
+class ActiveLabelDuplicateError(Exception):
     pass
 
 class SyntheticStream:
@@ -48,34 +48,20 @@ class SyntheticStream:
             
         self.all_labels_set.add(csampler.label)
         
-    """
-    def _calc_curr_class_probs(self) -> dict:
-        label_weight_pairs = []
-        weight_sum = 0.0
-        for label in self.all_labels_set:
-            if label in self.active_samplers.keys():
-                csampler = self.active_samplers[label]
-                weight_sum += csampler.curr_weight 
-                label_weight_pairs.append((label, csampler.curr_weight))
-        normalized_pairs = [ (label, w/weight_sum) for label, w in label_weight_pairs ]
-        return dict(normalized_pairs)
-    """
-
-    def _activate_csampler(self, csampler):
+    def _activate_csampler(self, csampler: ClassSampler):
         """Add `csampler` to dictionary of active samplers - currently used in a stream"""
         if csampler.label in self.active_samplers.keys():
-            raise ActiveLabelDuplicateErorr(f"Class {csampler.label} is already present as active")
+            raise ActiveLabelDuplicateError(f"Class {csampler.label} is already present as active")
         
         print(f"[.]: Activating class sampler {csampler.label} at time {self.next_t}.")
-        csampler.next_state()
         self.active_samplers[csampler.label] = csampler
 
-    def _remove_active_csampler(self, csampler):
+    def _remove_active_csampler(self, csampler: ClassSampler):
         assert csampler.label in self.active_samplers.keys()
         del self.active_samplers[csampler.label]
         print(f"[.]: Removing active class sampler {csampler.label} at time {self.next_t}.")
         
-    def _add_future_csampler(self, csampler):
+    def _add_future_csampler(self, csampler: ClassSampler):
         """Add `csampler` with `stream_t_start` > current stream `t`, to use-in-the-future samplers list """
 
         # Warn the user about consequences: 
@@ -83,11 +69,11 @@ class SyntheticStream:
         # rule violation: there can be only one example of active class
         if csampler.label in self.active_samplers.keys():
             active_cs = self.active_samplers[csampler.label]
-            samples_left = active_cs.n_samples or 'inf' # if None
+            samples_left = active_cs.samples_left or 'inf' 
             print(
                 f"[!]: WARNNING: Currently there exists active sampler "
                 f"since {active_cs.stream_t_start} timestamp, with "
-                f"{samples_left} samples left in local context.\n"
+                f"{samples_left} samples left in local context. "
                 "Make sure there is no chance of collision of two active samplers "
                 "from one class, in such case `SyntheticStream` will raise `ActiveClassDuplicateError.`"
             )
@@ -104,10 +90,13 @@ class SyntheticStream:
         if len(self.active_samplers.items()) == 0:
             raise NoActiveSamplersError(f"[!]: No more samplers in the stream at time {self.next_t}")
         
-        weights = [ csampler.get_state()[0] for csampler in self.active_samplers.values() ]
+        weights = [ csampler.weight(self.next_t) for csampler in self.active_samplers.values() ]
         active_csamplers = [ csampler for csampler in  self.active_samplers.values() ]
         
         weight_sum = sum(weights)
+        
+        if weight_sum < 1e-9:
+            raise ValueError("[!]: Sum of weights in active ClassSamplers is equal to 0.0")
 
         # Store results as probabilities inside dictionary: label -> prob
         self.last_class_probabilities = dict(
@@ -121,16 +110,15 @@ class SyntheticStream:
 
         selected_csampler = self._random.choices(active_csamplers, weights, k=1)[0]
 
-        self.last_sample = selected_csampler.curr_sample
-        self.last_label = selected_csampler.label
-
         # This may raise `EndOfClassError` and it is OK. 
         # It means it is an Error that user was prepared for while declaring ClassSampler strategy
-        try:
-            selected_csampler.next_state()
-        except EndOfClassSamples as e:
-            # This means we specified `n_samples` param inside ClassSampler
-            # deactivate because we already sampled `n_samples` from it.
+        self.last_sample = next(selected_csampler)
+        self.last_label = selected_csampler.label
+
+        # This means we specified `n_samples` param inside ClassSampler
+        # deactivate because we already sampled `n_samples` from it.
+        # Calling next() on csampler would raise StopIteration
+        if selected_csampler.end_of_iteration:
             self._remove_active_csampler(selected_csampler)
             
         # If future sampler is meant to start next round, activate it

@@ -1,4 +1,4 @@
-from synthstream import ClassSampler, EndOfClassSamples, EndOfClassError
+from synthstream import ClassSampler, EndOfClassError
 import pytest
 
 class TestClassSampler:
@@ -19,100 +19,97 @@ class TestClassSampler:
     def test_negative_weight_raises_exception(self):
         csampler = ClassSampler(
             label='None', samples=[], weight_func=lambda t: -1,
-            stream_t_start=0, n_samples=None, eoc_strategy='none'
+            stream_t_start=0, max_samples=None, eoc_strategy='none'
         )
 
         with pytest.raises(ValueError) as e:
-            _, x = csampler.next_and_get_state()
-
-        csampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda t: 0,
-            stream_t_start=0, n_samples=None, eoc_strategy='none'
-        )
-        
-        assert csampler.next_and_get_state() == (0, None)
-        
+            csampler.weight(0)
             
     def test_none_stream(self):
         csampler = ClassSampler(
             label='None', samples=[], weight_func=lambda _: 1,
-            stream_t_start=0, n_samples=None, eoc_strategy='none'
+            stream_t_start=0, max_samples=None, eoc_strategy='none'
         )
         
         for _ in range(1000):
-            assert csampler.next_and_get_state()[1] is None
+            assert next(csampler) is None
 
     def test_multiple_end_of_stream_samples_exception(self):
         example = (1, 1, 1)
         n_iters = 0
         csampler = ClassSampler(
             label='class', samples=[example, example], weight_func=lambda t: 1, 
-            stream_t_start=0, n_samples=n_iters, eoc_strategy='loop'
+            stream_t_start=0, max_samples=n_iters, eoc_strategy='loop'
         )
 
-        with pytest.raises(EndOfClassSamples) as e:
-            csampler.next_state()
+        with pytest.raises(StopIteration) as e:
+            next(csampler)
 
-        with pytest.raises(EndOfClassSamples) as e:
-            csampler.next_state()
+        with pytest.raises(StopIteration) as e:
+            next(csampler)
 
-        
-
-    def test_loop_eoc_strategy(self):
+    def test_loop_eoc_strategy_ends_after_max_samples(self):
         example = (1, 1, 1)
         n_iters = 5
         csampler = ClassSampler(
             label='class', samples=[example], weight_func=lambda t: 1, 
-            stream_t_start=0, n_samples=n_iters, eoc_strategy='loop'
+            stream_t_start=0, max_samples=n_iters, eoc_strategy='loop'
         )
         
         for _ in range(n_iters):
-            csampler.next_state()
-            _, x = csampler.get_state()
-            assert x == example
+            assert next(csampler) == example
         
-        with pytest.raises(EndOfClassSamples) as e:
-            csampler.next_state()
+        with pytest.raises(StopIteration) as e:
+            next(csampler)
         
-    def test_none_eoc_strategy(self):
+    def test_none_eoc_strategy_correctly_appends_none(self):
         example = (1, 1, 1)
         n_iters = 3
         csampler = ClassSampler(
             label='class', samples=[example], weight_func=lambda t: 1, 
-            stream_t_start=0, n_samples=n_iters, eoc_strategy='none'
+            stream_t_start=0, max_samples=n_iters, eoc_strategy='none'
         )
 
-        _, x = csampler.next_and_get_state()
-        assert x == example
-        
-        _, x = csampler.next_and_get_state()
-        assert x is None
-            
-        _, x = csampler.next_and_get_state()
-        assert x is None
+        assert next(csampler) == example
+        assert next(csampler) is None
+        assert next(csampler) is None
 
-        with pytest.raises(EndOfClassSamples) as e:
-            csampler.next_state()
+        with pytest.raises(StopIteration) as e:
+            next(csampler)
 
-    def test_raise_eoc_strategy(self):
+    def test_raise_eoc_strategy_after_class_ended(self):
         example = (1, 1, 1)
         n_iters = 3
         csampler = ClassSampler(
             label='class', samples=[example], weight_func=lambda t: 1, 
-            stream_t_start=0, n_samples=n_iters, eoc_strategy='raise'
+            stream_t_start=0, max_samples=n_iters, eoc_strategy='raise'
         )
 
-        _, x = csampler.next_and_get_state()
-        assert x == example
-        
-        with pytest.raises(EndOfClassError) as e:
-            _, x = csampler.next_state()
+        assert next(csampler) == example
 
         with pytest.raises(EndOfClassError) as e:
-            _, x = csampler.next_state()
+            next(csampler)
+
+        with pytest.raises(EndOfClassError) as e:
+            next(csampler)
+
+        with pytest.raises(EndOfClassError) as e:
+            next(csampler)
+
+        with pytest.raises(EndOfClassError) as e:
+            next(csampler)
 
 
+    def test_iter_and_next_interface(self):
+        csampler = ClassSampler(
+            label='test', samples=[1, 2, 3], weight_func=lambda t: 1, 
+            max_samples=3, eoc_strategy='raise'
+        )
         
-
+        assert next(csampler) == 1
+        assert sum([x for x in csampler]) == 2 + 3
+        
+        with pytest.raises(StopIteration):
+            next(csampler)
 
 
