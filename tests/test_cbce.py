@@ -1,5 +1,6 @@
 from cbce import CBCE
 from river import linear_model
+from river.drift.binary import DDM
 
 class TestCBCE:
 
@@ -92,3 +93,38 @@ class TestCBCE:
 
         assert model._class_priors["A"] > 0, "Provided wrong prior for reappeared class"
         assert "A" in model.predict_proba_one({"x": 9}), "Failed to provide reappeared class during prediction"
+
+    def test_drift_detector(self):
+        """
+        The model should react to concept drift in the classes it tracks.
+        """
+
+        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM())
+
+        DATA = [
+            ({"x": 1}, "A"),
+            ({"x": 2}, "A"),
+            ({"x": 3}, "A"),
+            ({"x": -2}, "B"),
+            ({"x": -4}, "B"),
+            ({"x": -2}, "B"),
+        ]
+
+        for x, y in DATA:
+            model.learn_one(x, y)
+
+        assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
+
+        VALUE_MUL = [1, -1]
+        LABEL = ["A", "B"]
+        DATA = [({"x": i * VALUE_MUL[i & 1]}, LABEL[i & 1]) for i in range(100)]
+
+        num_classes = 0
+        for x, y in DATA:
+            model.learn_one(x, y)
+            num_classes += len(model._class_priors)
+        
+        # According to the paper, whenever drift is detected in a certain class,
+        # the model for that class has to be reinitialized. At the time of writing, 
+        # in our implementation this means removing that class completely
+        assert num_classes < 200, "Failed to evict models for classes under drift"
