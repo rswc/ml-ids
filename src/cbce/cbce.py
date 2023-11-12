@@ -3,12 +3,14 @@ from river import base
 
 class CBCE(base.Wrapper, base.Classifier):
 
-    def __init__(self, classifier: base.Classifier, decay_factor: float = 0.9) -> None:
+    def __init__(self, classifier: base.Classifier, decay_factor: float = 0.9, disappearance_threshold = 1.7e-46) -> None:
         self.classifier = classifier
         self.classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
+        self.inactive_classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
         self._class_priors: dict[base.typing.ClfTarget, float] = {}
         self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
         self.decay_factor = decay_factor
+        self.disappearance_threshold = disappearance_threshold
 
     @property
     def _wrapped_model(self):
@@ -22,11 +24,11 @@ class CBCE(base.Wrapper, base.Classifier):
         for label in self._sample_buffer:
             self._sample_buffer[label].append(x)
 
-        if y not in self.classifiers:
+        # Class emergence
+        if y not in self._class_priors:
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
-                self._class_priors[y] = 0
             else:
                 # Second sample arrived, initilize model
                 buffer_len = len(self._sample_buffer[y])
@@ -43,9 +45,36 @@ class CBCE(base.Wrapper, base.Classifier):
 
                 # Stop buffering
                 del self._sample_buffer[y]
+        
+        # Class reoccurrence
+        elif self._class_priors[y] == 0:
+            if y not in self._sample_buffer:
+                # First sample arrived, start buffering
+                self._sample_buffer[y] = [x]
 
-        #TODO: class reoccurrence
-        #TODO: class disappearance
+                # Activate classifier
+                self.classifiers[y] = self.inactive_classifiers[y]
+                del self.inactive_classifiers[y]
+            else:
+                # Second sample arrived, initilize model
+                buffer_len = len(self._sample_buffer[y])
+
+                # Sample buffer contains the two positive samples, hence the -1
+                self._class_priors[y] = 1 / (buffer_len - 1)
+
+                # Stop buffering
+                del self._sample_buffer[y]
+        
+        # Class disappearance
+        disappeared_labels = []
+        for label, model in self.classifiers.items():
+            if self._class_priors[label] < self.disappearance_threshold and label not in self._sample_buffer:
+                self.inactive_classifiers[label] = model
+                self._class_priors[label] = 0
+                disappeared_labels.append(label)
+            
+        for label in disappeared_labels:
+            del self.classifiers[label]
 
         self.__updateCBModels(x, y, **kwargs)
 
@@ -57,8 +86,8 @@ class CBCE(base.Wrapper, base.Classifier):
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
                 model.learn_one(x, 1, **kwargs)
             else:
-                self._class_priors[y] *= self.decay_factor
-                p = self._class_priors[y] / (1 - self._class_priors[y])
+                self._class_priors[label] *= self.decay_factor
+                p = self._class_priors[label] / (1 - self._class_priors[label])
 
                 if random.random() < p:
                     model.learn_one(x, -1, **kwargs)
