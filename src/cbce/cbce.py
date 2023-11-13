@@ -7,7 +7,7 @@ class CBCE(base.Wrapper, base.Classifier):
     def __init__(
             self,
             classifier: base.Classifier,
-            drift_detector: base.DriftDetector = NoDrift(),
+            drift_detector: base.BinaryDriftDetector = NoDrift(),
             decay_factor: float = 0.9,
             disappearance_threshold = 1.7e-46
         ) -> None:
@@ -16,7 +16,7 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
         self.inactive_classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
-        self.drift_detectors: dict[base.typing.ClfTarget, base.DriftDetector] = {}
+        self.drift_detectors: dict[base.typing.ClfTarget, base.BinaryDriftDetector] = {}
         
         self.decay_factor = decay_factor
         self.disappearance_threshold = disappearance_threshold
@@ -46,12 +46,14 @@ class CBCE(base.Wrapper, base.Classifier):
                 buffer_len = len(self._sample_buffer[y])
 
                 model: base.Classifier = self.classifier.clone()
-                detector: base.DriftDetector = self.drift_detector.clone()
+                detector: base.BinaryDriftDetector = self.drift_detector.clone()
 
                 labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
                 for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
                     model.learn_one(buffered_x, buffered_y, **kwargs)
-                    detector.update(buffered_x)
+
+                    pred = self.predict_one(buffered_x)
+                    detector.update(pred != buffered_y)
                     
                 self.classifiers[y] = model
                 self.drift_detectors[y] = detector
@@ -94,8 +96,12 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.__updateCBModels(x, y, **kwargs)
 
-        if y in self.drift_detectors and self.drift_detectors[y].drift_detected:
-            self.__reset_model(y)
+        if y in self.drift_detectors:
+            pred = self.predict_one(x)
+            self.drift_detectors[y].update(pred != y)
+
+            if self.drift_detectors[y].drift_detected:
+                self.__reset_model(y)
 
         return self
     
@@ -104,7 +110,7 @@ class CBCE(base.Wrapper, base.Classifier):
             if y == label:
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
                 model.learn_one(x, 1, **kwargs)
-                self.drift_detectors[y].update(x)
+
             else:
                 self._class_priors[label] *= self.decay_factor
                 p = self._class_priors[label] / (1 - self._class_priors[label])
