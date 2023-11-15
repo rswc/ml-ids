@@ -9,7 +9,8 @@ setup(
         'colorama==0.4.6',
         'tqdm==4.66.1',
         'river==0.20.1',
-        'pytest==7.4.3'
+        'pytest==7.4.3',
+        'wandb==0.16.0'
     ],
     setup_requires=[
         'pytest-runner',
