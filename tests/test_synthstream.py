@@ -65,7 +65,7 @@ class TestSyntheticStream:
         )
         
         ss = SyntheticStream(max_samples=20)
-        ss.add_csampler(none_sampler)
+        ss.add_sampler(none_sampler)
         
         for i in range(10):
             next(ss) == (None, 'None')
@@ -129,7 +129,7 @@ class TestSyntheticStream:
             max_samples=1
         )
         ss = SyntheticStream(max_samples=1, seed=42)
-        ss.add_csampler(sampler_a)
+        ss.add_sampler(sampler_a)
         
         with pytest.raises(ValueError) as e:
             next(ss)

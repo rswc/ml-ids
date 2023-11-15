@@ -21,7 +21,7 @@ class SyntheticStream:
         self.last_label = None
         
         for csampler in init_csamplers: 
-            self.add_csampler(csampler)
+            self.add_sampler(csampler)
 
     def __iter__(self):
         return self
@@ -38,17 +38,17 @@ class SyntheticStream:
     def class_probabilities(self) -> dict:
         return self.last_class_probabilities
         
-    def add_csampler(self, csampler: ClassSampler):
+    def add_sampler(self, csampler: ClassSampler):
         if csampler.stream_t_start < self.next_t:
             raise ValueError("Trying to add class sampler in the past")
         elif csampler.stream_t_start == self.next_t:
-            self._activate_csampler(csampler)
+            self._activate_sampler(csampler)
         elif csampler.stream_t_start > self.next_t:
-            self._add_future_csampler(csampler)
+            self._add_future_sampler(csampler)
             
         self.all_labels_set.add(csampler.label)
         
-    def _activate_csampler(self, csampler: ClassSampler):
+    def _activate_sampler(self, csampler: ClassSampler):
         """Add `csampler` to dictionary of active samplers - currently used in a stream"""
         if csampler.label in self.active_samplers.keys():
             raise ActiveLabelDuplicateError(f"Class {csampler.label} is already present as active")
@@ -56,12 +56,12 @@ class SyntheticStream:
         print(f"[.]: Activating class sampler {csampler.label} at time {self.next_t}.")
         self.active_samplers[csampler.label] = csampler
 
-    def _remove_active_csampler(self, csampler: ClassSampler):
+    def _remove_active_sampler(self, csampler: ClassSampler):
         assert csampler.label in self.active_samplers.keys()
         del self.active_samplers[csampler.label]
         print(f"[.]: Removing active class sampler {csampler.label} at time {self.next_t}.")
         
-    def _add_future_csampler(self, csampler: ClassSampler):
+    def _add_future_sampler(self, csampler: ClassSampler):
         """Add `csampler` with `stream_t_start` > current stream `t`, to use-in-the-future samplers list """
 
         # Warn the user about consequences: 
@@ -119,12 +119,12 @@ class SyntheticStream:
         # deactivate because we already sampled `n_samples` from it.
         # Calling next() on csampler would raise StopIteration
         if selected_csampler.end_of_iteration:
-            self._remove_active_csampler(selected_csampler)
+            self._remove_active_sampler(selected_csampler)
             
         # If future sampler is meant to start next round, activate it
         for csampler in self.future_samplers:
             if csampler.stream_t_start == self.next_t + 1:
-                self._activate_csampler(csampler)
+                self._activate_sampler(csampler)
 
         self.next_t += 1
         
