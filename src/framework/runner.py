@@ -8,6 +8,25 @@ from river.metrics.base import Metrics
 import wandb
 
 class ExperimentRunner:
+    """Helper class for running experiments in a standardized way.
+
+    Parameters
+    ----------
+    model
+        The river-compatible classifier to be tested.
+    dataset
+        The river-compatible dataset class for this experiment.
+    metrics
+        A `river.metrics.base.Metrics` object containing a group of metrics to be collected.
+    out_dir
+        The directory to which `.csv` logs will be saved.
+    name
+        A custom name for this experiment.
+    enable_tracker
+        (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
+        from this experiment online.
+    
+    """
 
     def __init__(
             self,
@@ -34,6 +53,7 @@ class ExperimentRunner:
     
     @property
     def _parameters(self):
+        """Parameters of the experiment."""
         return {
             "id": self._id,
             "model": self.model.__class__.__name__,
@@ -87,4 +107,5 @@ class ExperimentRunner:
     
     @property
     def _metrics_dict(self):
+        """Current values of the metrics, as a Python dict"""
         return dict(zip(self._metrics_names, self.metrics.get()))
