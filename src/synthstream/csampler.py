@@ -41,7 +41,7 @@ class ClassSampler:
         self.eoc_strategy = eoc_strategy
         self.sample_iter = iter(self.sample_list)
 
-        self.next_i = 0
+        self.index = 0
         self.last_output = None
         
     def __iter__(self):
@@ -53,11 +53,11 @@ class ClassSampler:
     
     @property
     def samples_left(self) -> int | None:
-        return self.max_samples - self.next_i if self.max_samples is not None else None
+        return self.max_samples - self.index if self.max_samples is not None else None
     
     @property
     def end_of_iteration(self) -> bool:
-        return (self.next_i == self.max_samples)
+        return (self.index == self.max_samples)
         
     def weight(self, t: int):
         w = self.weight_func(t)
@@ -82,6 +82,6 @@ class ClassSampler:
                 # currently checked in __init__, otherwise undefined behaviour 
                 self.last_output = next(self.sample_iter)
             elif self.eoc_strategy == 'raise':
-                raise EndOfClassError(f"ClassSampler({self.label}) end of stream after advancing {self.next_i} samples")
+                raise EndOfClassError(f"ClassSampler({self.label}) end of stream after advancing {self.index} samples")
 
-        self.next_i += 1
+        self.index += 1

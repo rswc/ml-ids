@@ -13,7 +13,7 @@ class SyntheticStream:
         self.max_samples = max_samples
         self.active_samplers = dict()
         self.future_samplers: list(csampler) = []
-        self.next_t = 0 
+        self.t = 0 
         self.all_labels_set: set(str) = set()
 
         self.last_class_probabilities = None
@@ -39,11 +39,11 @@ class SyntheticStream:
         return self.last_class_probabilities
         
     def add_sampler(self, csampler: ClassSampler):
-        if csampler.stream_t_start < self.next_t:
+        if csampler.stream_t_start < self.t:
             raise ValueError("Trying to add class sampler in the past")
-        elif csampler.stream_t_start == self.next_t:
+        elif csampler.stream_t_start == self.t:
             self._activate_sampler(csampler)
-        elif csampler.stream_t_start > self.next_t:
+        elif csampler.stream_t_start > self.t:
             self._add_future_sampler(csampler)
             
         self.all_labels_set.add(csampler.label)
@@ -53,13 +53,13 @@ class SyntheticStream:
         if csampler.label in self.active_samplers.keys():
             raise ActiveLabelDuplicateError(f"Class {csampler.label} is already present as active")
         
-        print(f"[.]: Activating class sampler {csampler.label} at time {self.next_t}.")
+        print(f"[.]: Activating class sampler {csampler.label} at time {self.t}.")
         self.active_samplers[csampler.label] = csampler
 
     def _remove_active_sampler(self, csampler: ClassSampler):
         assert csampler.label in self.active_samplers.keys()
         del self.active_samplers[csampler.label]
-        print(f"[.]: Removing active class sampler {csampler.label} at time {self.next_t}.")
+        print(f"[.]: Removing active class sampler {csampler.label} at time {self.t}.")
         
     def _add_future_sampler(self, csampler: ClassSampler):
         """Add `csampler` with `stream_t_start` > current stream `t`, to use-in-the-future samplers list """
@@ -78,19 +78,19 @@ class SyntheticStream:
                 "from one class, in such case `SyntheticStream` will raise `ActiveClassDuplicateError.`"
             )
             
-        assert csampler.stream_t_start > self.next_t
+        assert csampler.stream_t_start > self.t
         self.future_samplers.append(csampler)
     
     def _advance_state(self):
         # raise StopIteration to correctly handle `for x in stream` syntax
-        if self.next_t == self.max_samples:
+        if self.t == self.max_samples:
             raise StopIteration
         
         # raise Exception if there is no samplers to sample from
         if len(self.active_samplers.items()) == 0:
-            raise NoActiveSamplersError(f"[!]: No more samplers in the stream at time {self.next_t}")
+            raise NoActiveSamplersError(f"[!]: No more samplers in the stream at time {self.t}")
         
-        weights = [ csampler.weight(self.next_t) for csampler in self.active_samplers.values() ]
+        weights = [ csampler.weight(self.t) for csampler in self.active_samplers.values() ]
         active_csamplers = [ csampler for csampler in  self.active_samplers.values() ]
         
         weight_sum = sum(weights)
@@ -123,8 +123,8 @@ class SyntheticStream:
             
         # If future sampler is meant to start next round, activate it
         for csampler in self.future_samplers:
-            if csampler.stream_t_start == self.next_t + 1:
+            if csampler.stream_t_start == self.t + 1:
                 self._activate_sampler(csampler)
 
-        self.next_t += 1
+        self.t += 1
         
