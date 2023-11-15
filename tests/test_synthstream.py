@@ -30,8 +30,8 @@ class TestSyntheticStream:
 
     def test_stream_end_of_iteration(self): 
         none_sampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda t: 5, 
-            stream_t_start=0, max_samples=10, eoc_strategy='none'
+            label='None', samples=[None], weight_func=lambda t: 5, 
+            stream_t_start=0, max_samples=10, eoc_strategy='loop'
         )
         
         ss = SyntheticStream(max_samples=2, seed=42, init_csamplers=[none_sampler])
@@ -44,8 +44,8 @@ class TestSyntheticStream:
             
     def test_iterator_interface_correctness(self):
         none_sampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda t: 1, 
-            max_samples=20, eoc_strategy='none'
+            label='None', samples=[None], weight_func=lambda t: 1, 
+            max_samples=20, eoc_strategy='loop'
         )
         
         ss = SyntheticStream(max_samples=10, init_csamplers=[none_sampler])
@@ -60,8 +60,8 @@ class TestSyntheticStream:
             
     def test_synthstream_end_raises_no_active_samplers_error(self):
         none_sampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda t: 1,
-            max_samples=10, eoc_strategy='none'
+            label='None', samples=[None], weight_func=lambda t: 1,
+            max_samples=10, eoc_strategy='loop'
         )
         
         ss = SyntheticStream(max_samples=20)

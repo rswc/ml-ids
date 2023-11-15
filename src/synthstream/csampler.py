@@ -24,8 +24,8 @@ class ClassSampler:
         if eoc_strategy not in ClassSampler.EOC_STRATEGIES:
             raise ValueError(f"Invalid eoc_strategy: {eoc_strategy} - does not match {ClassSampler.EOC_STRATEGIES}")
         
-        if eoc_strategy == 'loop' and len(samples) == 0:
-            raise ValueError(f"Invalid samples: {samples} - list cannot be empty when eoc_strategy is set to 'loop'")
+        if len(samples) == 0:
+            raise ValueError(f"Invalid samples: {samples} - list cannot be empty")
         
         if max_samples is not None and max_samples < 0:
             raise ValueError("Number of samples cannot be less than 0")

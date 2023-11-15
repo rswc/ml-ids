@@ -8,6 +8,9 @@ class TestClassSampler:
             csampler = ClassSampler('test', [], lambda t: 1, 0, 500, 'loop')
 
         with pytest.raises(ValueError) as e:
+            csampler = ClassSampler('test', [], lambda t: 1, 0, 500, 'none')
+
+        with pytest.raises(ValueError) as e:
             csampler = ClassSampler('test', [(1, 1)], lambda t: 1, 0, -1)
     
         with pytest.raises(ValueError) as e:
@@ -18,18 +21,22 @@ class TestClassSampler:
             
     def test_negative_weight_raises_exception(self):
         csampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda t: -1,
-            stream_t_start=0, max_samples=None, eoc_strategy='none'
+            label='None', samples=[None], weight_func=lambda t: -1,
+            stream_t_start=0, max_samples=None, eoc_strategy='loop'
         )
 
         with pytest.raises(ValueError) as e:
             csampler.weight(0)
             
-    def test_none_stream(self):
+    def test_none_strategy_start_to_produce_none(self):
         csampler = ClassSampler(
-            label='None', samples=[], weight_func=lambda _: 1,
+            label='Test', samples=[1, 2, 3], weight_func=lambda _: 1,
             stream_t_start=0, max_samples=None, eoc_strategy='none'
         )
+        
+        assert next(csampler) == 1
+        assert next(csampler) == 2
+        assert next(csampler) == 3
         
         for _ in range(1000):
             assert next(csampler) is None
