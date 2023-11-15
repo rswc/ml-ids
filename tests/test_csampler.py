@@ -4,19 +4,19 @@ import pytest
 class TestClassSampler:
     
     def test_invalid_init_params_throws_exception(self):
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler = ClassSampler('test', [], lambda t: 1, 0, 500, 'loop')
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler = ClassSampler('test', [], lambda t: 1, 0, 500, 'none')
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler = ClassSampler('test', [(1, 1)], lambda t: 1, 0, -1)
     
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler = ClassSampler('test', [(1, 1)], lambda t: 1, -1)
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler = ClassSampler('test', [(1, 1)], lambda t: 1, 0, eoc_strategy='!@#$')
             
     def test_negative_weight_raises_exception(self):
@@ -25,7 +25,7 @@ class TestClassSampler:
             stream_t_start=0, max_samples=None, eoc_strategy='loop'
         )
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             csampler.weight(0)
             
     def test_none_strategy_start_to_produce_none(self):
@@ -49,10 +49,10 @@ class TestClassSampler:
             stream_t_start=0, max_samples=n_iters, eoc_strategy='loop'
         )
 
-        with pytest.raises(StopIteration) as e:
+        with pytest.raises(StopIteration):
             next(csampler)
 
-        with pytest.raises(StopIteration) as e:
+        with pytest.raises(StopIteration):
             next(csampler)
 
     def test_loop_eoc_strategy_ends_after_max_samples(self):
@@ -66,7 +66,7 @@ class TestClassSampler:
         for _ in range(n_iters):
             assert next(csampler) == example
         
-        with pytest.raises(StopIteration) as e:
+        with pytest.raises(StopIteration):
             next(csampler)
         
     def test_none_eoc_strategy_correctly_appends_none(self):
@@ -81,7 +81,7 @@ class TestClassSampler:
         assert next(csampler) is None
         assert next(csampler) is None
 
-        with pytest.raises(StopIteration) as e:
+        with pytest.raises(StopIteration):
             next(csampler)
 
     def test_raise_eoc_strategy_after_class_ended(self):
@@ -94,16 +94,16 @@ class TestClassSampler:
 
         assert next(csampler) == example
 
-        with pytest.raises(EndOfClassError) as e:
+        with pytest.raises(EndOfClassError):
             next(csampler)
 
-        with pytest.raises(EndOfClassError) as e:
+        with pytest.raises(EndOfClassError):
             next(csampler)
 
-        with pytest.raises(EndOfClassError) as e:
+        with pytest.raises(EndOfClassError):
             next(csampler)
 
-        with pytest.raises(EndOfClassError) as e:
+        with pytest.raises(EndOfClassError):
             next(csampler)
 
 

@@ -39,7 +39,7 @@ class TestSyntheticStream:
         assert next(ss)[0] is None
         assert next(ss)[0] is None
         
-        with pytest.raises(StopIteration) as e:
+        with pytest.raises(StopIteration):
             next(ss)
             
     def test_iterator_interface_correctness(self):
@@ -70,7 +70,7 @@ class TestSyntheticStream:
         for i in range(10):
             next(ss) == (None, 'None')
             
-        with pytest.raises(NoActiveSamplersError) as e:
+        with pytest.raises(NoActiveSamplersError):
             next(ss)
         
     def test_raise_eoc_class_sampler_end_of_class_error(self):
@@ -89,7 +89,6 @@ class TestSyntheticStream:
 
     
     def test_valid_class_probabilities_in_stream(self):
-        FLOAT_EPS = 1e-9
         sampler_a = ClassSampler(
             label = 'A', samples=[1] * 20, weight_func=lambda t: 10, max_samples=2
         )
@@ -131,7 +130,7 @@ class TestSyntheticStream:
         ss = SyntheticStream(max_samples=1, seed=42)
         ss.add_sampler(sampler_a)
         
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             next(ss)
 
 
