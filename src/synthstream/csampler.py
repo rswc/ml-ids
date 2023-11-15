@@ -1,3 +1,5 @@
+from typing import Optional
+
 class EndOfClassError(Exception):
     pass
 
@@ -19,7 +21,7 @@ class ClassSampler:
     
     EOC_STRATEGIES = ['raise', 'loop', 'none']
     
-    def __init__(self, label: str, samples: list, weight_func: callable, stream_t_start: int = 0, max_samples: int | None = None, eoc_strategy: str = 'raise'):
+    def __init__(self, label: str, samples: list, weight_func: callable, stream_t_start: int = 0, max_samples: int = None, eoc_strategy: str = 'raise'):
 
         if eoc_strategy not in ClassSampler.EOC_STRATEGIES:
             raise ValueError(f"Invalid eoc_strategy: {eoc_strategy} - does not match {ClassSampler.EOC_STRATEGIES}")
@@ -52,14 +54,14 @@ class ClassSampler:
         return self.last_output
     
     @property
-    def samples_left(self) -> int | None:
+    def samples_left(self) -> Optional[int]: 
         return self.max_samples - self.index if self.max_samples is not None else None
     
     @property
     def end_of_iteration(self) -> bool:
         return (self.index == self.max_samples)
         
-    def weight(self, t: int):
+    def weight(self, t: int) -> float:
         w = self.weight_func(t)
         if w < 0:
             raise ValueError("Weight function returned value below zero")
