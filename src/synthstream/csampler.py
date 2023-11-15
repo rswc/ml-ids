@@ -61,7 +61,7 @@ class ClassSampler:
         
     def weight(self, t: int):
         w = self.weight_func(t)
-        if w < -1e-9:
+        if w < 0:
             raise ValueError("Weight function returned value below zero")
         return w
 
