@@ -90,7 +90,7 @@ class SyntheticStream:
             raise NoActiveSamplersError(f"[!]: No more samplers in the stream at time {self.t}")
         
         weights = [ csampler.weight(self.t) for csampler in self.active_samplers.values() ]
-        active_csamplers = [ csampler for csampler in  self.active_samplers.values() ]
+        active_csamplers = list(self.active_samplers.values())
         
         weight_sum = sum(weights)
         
