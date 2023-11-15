@@ -51,7 +51,7 @@ class SyntheticStream:
     def _activate_sampler(self, csampler: ClassSampler):
         """Add `csampler` to dictionary of active samplers - currently used in a stream"""
         if csampler.label in self.active_samplers.keys():
-            raise ActiveLabelDuplicateError(f"Class {csampler.label} is already present as active")
+            raise ActiveLabelDuplicateError(f"An active sampler of class {csampler.label} is already present")
         
         print(f"[.]: Activating class sampler {csampler.label} at time {self.t}.")
         self.active_samplers[csampler.label] = csampler
