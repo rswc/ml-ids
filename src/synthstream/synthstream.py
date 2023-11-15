@@ -71,11 +71,10 @@ class SyntheticStream:
             active_cs = self.active_samplers[csampler.label]
             samples_left = active_cs.samples_left or 'inf' 
             print(
-                f"[!]: WARNNING: Currently there exists active sampler "
-                f"since {active_cs.stream_t_start} timestamp, with "
-                f"{samples_left} samples left in local context. "
-                "Make sure there is no chance of collision of two active samplers "
-                "from one class, in such case `SyntheticStream` will raise `ActiveClassDuplicateError.`"
+                f"[!]: WARNING:A sampler of class {csampler.label} is currently active "
+                f"(since t={active_cs.stream_t_start}), with {samples_left} samples left. "
+                "Make sure there is no chance of collision between two active samplers of the same class. "
+                "In such cases `SyntheticStream` will raise `ActiveClassDuplicateError`"
             )
             
         assert csampler.stream_t_start > self.t
