@@ -82,11 +82,11 @@ class SyntheticStream:
         self.future_samplers.append(csampler)
     
     def _advance_state(self):
-        # raise StopIteration to correctly handle `for x in stream` syntax
+        # Raise StopIteration to correctly handle `for x in stream` syntax
         if self.t == self.max_samples:
             raise StopIteration
         
-        # raise Exception if there is no samplers to sample from
+        # Raise Exception if there is no samplers to sample from
         if len(self.active_samplers.items()) == 0:
             raise NoActiveSamplersError(f"[!]: No more samplers in the stream at time {self.t}")
         
@@ -103,7 +103,7 @@ class SyntheticStream:
             [(csampler.label, w / weight_sum) for w, csampler in zip(weights, active_csamplers)]
         )
 
-        # fill not used classes with probability 0.0
+        # Fill not used classes with probability 0.0
         for label in self.all_labels_set:
             if label not in self.last_class_probabilities:
                 self.last_class_probabilities[label] = 0.0

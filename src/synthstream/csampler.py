@@ -78,7 +78,7 @@ class ClassSampler:
                 self.last_output = None
             elif self.eoc_strategy == 'loop':
                 self.sample_iter = iter(self.sample_list)
-                # possible of raising another exception when list is empty and 'loop' strategy applied
+                # Possible of raising another exception when list is empty and 'loop' strategy applied
                 # currently checked in __init__, otherwise undefined behaviour 
                 self.last_output = next(self.sample_iter)
             elif self.eoc_strategy == 'raise':
