@@ -97,16 +97,13 @@ class SyntheticStream:
         if weight_sum < 1e-9:
             raise ValueError("[!]: Sum of weights in active ClassSamplers is equal to 0.0")
 
-        # Store results as probabilities inside dictionary: label -> prob
-        self.last_class_probabilities = dict(
-            [(csampler.label, w / weight_sum) for w, csampler in zip(weights, active_csamplers)]
-        )
+        # Create dictionary with all classes, set probability to 0.0
+        self.last_class_probabilities = dict([(label, 0.0) for label in self.all_labels_set])
 
-        # Fill not used classes with probability 0.0
-        for label in self.all_labels_set:
-            if label not in self.last_class_probabilities:
-                self.last_class_probabilities[label] = 0.0
-
+        # Store normalized results for every label
+        for w, csampler in zip(weights, active_csamplers):
+            self.last_class_probabilities[csampler.label] = w / weight_sum
+            
         selected_csampler = self._random.choices(active_csamplers, weights, k=1)[0]
 
         # This may raise `EndOfClassError` and it is OK. 
