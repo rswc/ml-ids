@@ -9,7 +9,7 @@ class CBCE(base.Wrapper, base.Classifier):
             classifier: base.Classifier,
             drift_detector: base.BinaryDriftDetector = NoDrift(),
             decay_factor: float = 0.9,
-            disappearance_threshold = 1.7e-46
+            disappearance_threshold: float = 0.9 ** 1000
         ) -> None:
         self.classifier = classifier
         self.drift_detector = drift_detector
@@ -32,6 +32,9 @@ class CBCE(base.Wrapper, base.Classifier):
     def _multiclass(self):
         return True
     
+    def is_active(self, cls: base.typing.ClfTarget) -> bool:
+        return self._class_priors.get(cls, 0) > 0
+    
     def learn_one(self, x: dict, y: base.typing.ClfTarget, **kwargs) -> base.Classifier:
         for label in self._sample_buffer:
             self._sample_buffer[label].append(x)
@@ -41,22 +44,20 @@ class CBCE(base.Wrapper, base.Classifier):
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
+
+                self.drift_detectors[y] = self.drift_detector.clone()
+
             else:
                 # Second sample arrived, initilize model
                 buffer_len = len(self._sample_buffer[y])
 
                 model: base.Classifier = self.classifier.clone()
-                detector: base.BinaryDriftDetector = self.drift_detector.clone()
 
                 labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
                 for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
                     model.learn_one(buffered_x, buffered_y, **kwargs)
-
-                    pred = self.predict_one(buffered_x)
-                    detector.update(pred != buffered_y)
                     
                 self.classifiers[y] = model
-                self.drift_detectors[y] = detector
 
                 # Sample buffer contains the two positive samples, hence the -1
                 self._class_priors[y] = 1 / (buffer_len - 1)
@@ -96,7 +97,8 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.__updateCBModels(x, y, **kwargs)
 
-        if y in self.drift_detectors:
+        # Update drift detector
+        if self.is_active(y):
             pred = self.predict_one(x)
             self.drift_detectors[y].update(pred != y)
 
