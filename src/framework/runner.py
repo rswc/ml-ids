@@ -21,10 +21,14 @@ class ExperimentRunner:
     out_dir
         The directory to which `.csv` logs will be saved.
     name
-        A custom name for this experiment.
+        (optional) A custom name for this experiment.
     enable_tracker
         (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
         from this experiment online.
+    project
+        (wandb only, optional) The name of the project under which this exepriment should be categorized.
+    entity
+        (wandb only, optional) The entity (user or team) which owns this experiment.
     
     """
 
@@ -35,12 +39,16 @@ class ExperimentRunner:
             metrics: Metrics,
             out_dir: str,
             name: str = None,
-            enable_tracker: bool = True
+            enable_tracker: bool = True,
+            project: str = None,
+            entity: str = None,
         ) -> None:
         self.model = model
         self.dataset = dataset
         self.metrics = metrics
         self.out_dir = out_dir
+        self.entity = entity
+        self.project = project
 
         self._enable_tracker = enable_tracker
 
@@ -65,7 +73,12 @@ class ExperimentRunner:
     def run(self):
         print("Starting experiment:", self._id)
 
-        wandb.init(config=self._parameters, mode=["disabled", "online"][self._enable_tracker])
+        wandb.init(
+            entity=self.entity,
+            project=self.project,
+            config=self._parameters,
+            mode=["disabled", "online"][self._enable_tracker]
+        )
 
         with open(self._meta_path, "x") as file_meta:
             json.dump(self._parameters, file_meta, default=lambda o: repr(o), indent=4)
