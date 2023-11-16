@@ -1,16 +1,30 @@
 import random
 from river import base
+from river.drift import NoDrift
 
 class CBCE(base.Wrapper, base.Classifier):
 
-    def __init__(self, classifier: base.Classifier, decay_factor: float = 0.9, disappearance_threshold = 1.7e-46) -> None:
+    def __init__(
+            self,
+            classifier: base.Classifier,
+            drift_detector: base.BinaryDriftDetector = NoDrift(),
+            decay_factor: float = 0.9,
+            disappearance_threshold: float = 0.9 ** 1000,
+            seed: int = None
+        ) -> None:
         self.classifier = classifier
+        self.drift_detector = drift_detector
+
         self.classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
         self.inactive_classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
-        self._class_priors: dict[base.typing.ClfTarget, float] = {}
-        self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
+        self.drift_detectors: dict[base.typing.ClfTarget, base.BinaryDriftDetector] = {}
+        
         self.decay_factor = decay_factor
         self.disappearance_threshold = disappearance_threshold
+        
+        self._class_priors: dict[base.typing.ClfTarget, float] = {}
+        self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
+        self._random = random.Random(seed)
 
     @property
     def _wrapped_model(self):
@@ -19,6 +33,9 @@ class CBCE(base.Wrapper, base.Classifier):
     @property
     def _multiclass(self):
         return True
+    
+    def is_active(self, cls: base.typing.ClfTarget) -> bool:
+        return self._class_priors.get(cls, 0) > 0
     
     def learn_one(self, x: dict, y: base.typing.ClfTarget, **kwargs) -> base.Classifier:
         for label in self._sample_buffer:
@@ -29,11 +46,15 @@ class CBCE(base.Wrapper, base.Classifier):
             if y not in self._sample_buffer:
                 # First sample arrived, start buffering
                 self._sample_buffer[y] = [x]
+
+                self.drift_detectors[y] = self.drift_detector.clone()
+
             else:
                 # Second sample arrived, initilize model
                 buffer_len = len(self._sample_buffer[y])
 
                 model: base.Classifier = self.classifier.clone()
+
                 labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
                 for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
                     model.learn_one(buffered_x, buffered_y, **kwargs)
@@ -78,6 +99,14 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.__updateCBModels(x, y, **kwargs)
 
+        # Update drift detector
+        if self.is_active(y):
+            pred = self.predict_one(x)
+            self.drift_detectors[y].update(pred != y)
+
+            if self.drift_detectors[y].drift_detected:
+                self.__reset_model(y)
+
         return self
     
     def __updateCBModels(self, x: dict, y: base.typing.ClfTarget, **kwargs):
@@ -85,12 +114,20 @@ class CBCE(base.Wrapper, base.Classifier):
             if y == label:
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
                 model.learn_one(x, 1, **kwargs)
+
             else:
                 self._class_priors[label] *= self.decay_factor
                 p = self._class_priors[label] / (1 - self._class_priors[label])
 
-                if random.random() < p:
+                if self._random.random() < p:
                     model.learn_one(x, -1, **kwargs)
+
+    def __reset_model(self, y: base.typing.ClfTarget):
+        self.classifiers.pop(y, None)
+        self.inactive_classifiers.pop(y, None)
+        self.drift_detectors.pop(y, None)
+        self._class_priors.pop(y, None)
+        self._sample_buffer.pop(y, None)
 
     def predict_proba_one(self, x: dict, **kwargs) -> dict[base.typing.ClfTarget, float]:
         y_pred = {}
