@@ -9,7 +9,8 @@ class CBCE(base.Wrapper, base.Classifier):
             classifier: base.Classifier,
             drift_detector: base.BinaryDriftDetector = NoDrift(),
             decay_factor: float = 0.9,
-            disappearance_threshold: float = 0.9 ** 1000
+            disappearance_threshold: float = 0.9 ** 1000,
+            seed: int = None
         ) -> None:
         self.classifier = classifier
         self.drift_detector = drift_detector
@@ -23,6 +24,7 @@ class CBCE(base.Wrapper, base.Classifier):
         
         self._class_priors: dict[base.typing.ClfTarget, float] = {}
         self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
+        self._random = random.Random(seed)
 
     @property
     def _wrapped_model(self):
@@ -117,7 +119,7 @@ class CBCE(base.Wrapper, base.Classifier):
                 self._class_priors[label] *= self.decay_factor
                 p = self._class_priors[label] / (1 - self._class_priors[label])
 
-                if random.random() < p:
+                if self._random.random() < p:
                     model.learn_one(x, -1, **kwargs)
 
     def __reset_model(self, y: base.typing.ClfTarget):
