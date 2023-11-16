@@ -16,6 +16,6 @@ from framework import ExperimentRunner
 
 model = tree.HoeffdingTreeClassifier()
 
-runner = ExperimentRunner(model, dataset, Metrics([metrics.Precision(), metrics.Recall()]), "./out")
+runner = ExperimentRunner(model, dataset, Metrics([metrics.Precision(), metrics.Recall()]), "./out", project="ml-ids")
 
 runner.run()

@@ -5,14 +5,52 @@ import json
 from river.base import Classifier
 from river.datasets.base import Dataset
 from river.metrics.base import Metrics
+import wandb
 
 class ExperimentRunner:
+    """Helper class for running experiments in a standardized way.
 
-    def __init__(self, model: Classifier, dataset: Dataset, metrics: Metrics, out_dir: str, name: str = None) -> None:
+    Parameters
+    ----------
+    model
+        The river-compatible classifier to be tested.
+    dataset
+        The river-compatible dataset class for this experiment.
+    metrics
+        A `river.metrics.base.Metrics` object containing a group of metrics to be collected.
+    out_dir
+        The directory to which `.csv` logs will be saved.
+    name
+        (optional) A custom name for this experiment.
+    enable_tracker
+        (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
+        from this experiment online.
+    project
+        (wandb only, optional) The name of the project under which this exepriment should be categorized.
+    entity
+        (wandb only, optional) The entity (user or team) which owns this experiment.
+    
+    """
+
+    def __init__(
+            self,
+            model: Classifier,
+            dataset: Dataset,
+            metrics: Metrics,
+            out_dir: str,
+            name: str = None,
+            enable_tracker: bool = True,
+            project: str = None,
+            entity: str = None,
+        ) -> None:
         self.model = model
         self.dataset = dataset
         self.metrics = metrics
         self.out_dir = out_dir
+        self.entity = entity
+        self.project = project
+
+        self._enable_tracker = enable_tracker
 
         assert metrics.works_with(model), "Invalid metrics for model"
         assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
@@ -23,15 +61,24 @@ class ExperimentRunner:
     
     @property
     def _parameters(self):
+        """Parameters of the experiment."""
         return {
             "id": self._id,
-            "model": self.model._get_params(),
+            "model": self.model.__class__.__name__,
+            "hyperparameters": self.model._get_params(),
             "dataset": self.dataset._repr_content,
             "metrics": self._metrics_names
         }
     
     def run(self):
         print("Starting experiment:", self._id)
+
+        wandb.init(
+            entity=self.entity,
+            project=self.project,
+            config=self._parameters,
+            mode=["disabled", "online"][self._enable_tracker]
+        )
 
         with open(self._meta_path, "x") as file_meta:
             json.dump(self._parameters, file_meta, default=lambda o: repr(o), indent=4)
@@ -53,7 +100,10 @@ class ExperimentRunner:
                 if y_pred is not None:
                     self.metrics.update(y, y_pred)
                     writer_metrics.writerow(self.metrics.get())
+                    wandb.log(self._metrics_dict)
         
+        wandb.finish()
+
         print("Experiment DONE")
     
     @property
@@ -67,3 +117,8 @@ class ExperimentRunner:
     @property
     def _meta_path(self):
         return os.path.join(self.out_dir, self._id + "_META.json")
+    
+    @property
+    def _metrics_dict(self):
+        """Current values of the metrics, as a Python dict"""
+        return dict(zip(self._metrics_names, self.metrics.get()))
