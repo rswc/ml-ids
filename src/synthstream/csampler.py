@@ -42,6 +42,10 @@ class ClassSampler:
         self.max_samples = max_samples
         self.eoc_strategy = eoc_strategy
         self.sample_iter = iter(self.sample_list)
+        
+        # Flag used currently only for eoc_strategy when set to True 
+        # iterating using `self.sample_iter` is disabled
+        self.none_stream_started = False
 
         self.index = 0
         self.last_output = None
@@ -72,11 +76,12 @@ class ClassSampler:
             raise StopIteration(f"ClassSampler({self.label}) already produced {self.max_samples} samples") 
         
         try:
-            self.last_output = next(self.sample_iter)
+            if not self.none_stream_started:
+                self.last_output = next(self.sample_iter)
         except StopIteration:
             if self.eoc_strategy == 'none':
-                # Probably should mark some boolean flag to speed up creating 'none'-streams 
-                # and do not throw exceptions every time we change state
+                # Sets flag for in-a-loop endless None generation
+                self.none_stream_started = True
                 self.last_output = None
             elif self.eoc_strategy == 'loop':
                 self.sample_iter = iter(self.sample_list)
