@@ -3,8 +3,9 @@ from datetime import datetime
 import csv
 import json
 from river.base import Classifier
-from river.datasets.base import Dataset
-from river.metrics.base import Metrics
+from river.datasets.base import Dataset, MULTI_CLF
+from river.metrics.base import Metrics, BinaryMetric
+from metrics import MetricWrapper
 import wandb
 
 class ExperimentRunner:
@@ -53,6 +54,7 @@ class ExperimentRunner:
         self._enable_tracker = enable_tracker
 
         assert metrics.works_with(model), "Invalid metrics for model"
+        assert self._metrics_match_dataset(), "Invalid use of binary metric for multiclass dataset"
         assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
 
         time = datetime.now().strftime("%y-%m-%d_%H%M%S")
@@ -105,10 +107,27 @@ class ExperimentRunner:
         wandb.finish()
 
         print("Experiment DONE")
+
+    def _metrics_match_dataset(self) -> bool:
+        """Check if there exist binary-only metric for multiclass dataset"""
+        if self.dataset.task != MULTI_CLF:
+            return True
+        
+        for m in self.metrics:
+            if isinstance(m, BinaryMetric): 
+                return False
+            elif isinstance(m, MetricWrapper):
+                if not m.works_with_multiclass:
+                    return False
+        return True
+
+    def __extract_metric_name(self, metric) -> str:
+        """Extract name of the metric using method compliant with `MetricWrapper` based on `Metric` __repr__"""
+        return str(metric).split(':')[0]
     
     @property
     def _metrics_names(self):
-        return [metric.__class__.__name__ for metric in self.metrics]
+        return [ self.__extract_metric_name(metric) for metric in self.metrics]
     
     @property
     def _metrics_path(self):
