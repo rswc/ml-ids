@@ -25,6 +25,7 @@ class CBCE(base.Wrapper, base.Classifier):
         self._class_priors: dict[base.typing.ClfTarget, float] = {}
         self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
         self._random = random.Random(seed)
+        self.seed = seed
 
     @property
     def _wrapped_model(self):
