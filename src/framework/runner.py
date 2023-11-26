@@ -7,6 +7,7 @@ from river.datasets.base import Dataset, MULTI_CLF
 from river.metrics.base import Metrics, BinaryMetric
 from metrics import MetricWrapper
 import wandb
+from synthstream import SyntheticStream
 
 class ExperimentRunner:
     """Helper class for running experiments in a standardized way.
@@ -102,8 +103,18 @@ class ExperimentRunner:
                 if y_pred is not None:
                     self.metrics.update(y, y_pred)
                     writer_metrics.writerow(self.metrics.get())
-                    wandb.log(self._metrics_dict)
-        
+                    
+                    dataset_dict = {}
+
+                    if isinstance(self.dataset, SyntheticStream):
+                        for c, w in self.dataset.class_weights.items():
+                            dataset_dict[f"ClassWeight({c})"] = w
+                            
+                        for c, p in self.dataset.class_probabilities.items():
+                            dataset_dict[f"ClassProbability({c})"] = p
+
+                    wandb.log({**self._metrics_dict, **dataset_dict})
+
         wandb.finish()
 
         print("Experiment DONE")
