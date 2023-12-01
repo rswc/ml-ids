@@ -252,7 +252,7 @@ class CICIDS2017(base.FileDataset):
                 "Label",
             ]
         super().__init__(
-            n_samples=1787064,
+            n_samples=2099976,
             n_classes=16,  # With all attempted attacks classified as BENIGN
             n_features=len(self.used_features) - 1,  # -1 because label is not a feature in stream
             task=base.MULTI_CLF,
