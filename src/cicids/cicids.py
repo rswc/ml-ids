@@ -254,7 +254,7 @@ class CICIDS2017(base.FileDataset):
         super().__init__(
             n_samples=1787064,
             n_classes=16,  # With all attempted attacks classified as BENIGN
-            n_features=len(self.used_features) - 1,  # 90 in total 10 used by default
+            n_features=len(self.used_features) - 1,  # -1 because label is not a feature in stream
             task=base.MULTI_CLF,
             filename=filename,
             directory=directory
@@ -274,7 +274,7 @@ class CICIDS2017(base.FileDataset):
             drop=drop_features
         )
 
-    def plot_class_hist(self, window_size: int = 1000):
+    def plot_class_percentage(self, window_size: int = 1000):
         classes = self.classes
 
         result_dict = {element: 0 for element in classes}
