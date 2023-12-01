@@ -1,10 +1,10 @@
 from river import stream
 from river.datasets import base
 from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
+#import numpy as np
+#import matplotlib.pyplot as plt
+#import seaborn as sns
+#import pandas as pd
 
 class CICIDS2017(base.FileDataset):
     """Class used to handle and load the CICIDS2017 dataset.
@@ -274,33 +274,33 @@ class CICIDS2017(base.FileDataset):
             drop=drop_features
         )
 
-    def plot_class_percentage(self, window_size: int = 1000):
-        classes = self.classes
-
-        result_dict = {element: 0 for element in classes}
-        last_samples = []
-        class_percentages = []
-
-        for x in tqdm(iter(self)):
-            if x[1] not in classes:
-                continue
-
-            if len(last_samples) == window_size:
-                removed_sample = last_samples.pop(0)
-                result_dict[removed_sample] -= 1
-
-            last_samples.append(x[1])
-            result_dict[x[1]] += 1
-
-            n_samples = len(last_samples)
-            class_percentages.append([((val / n_samples) * 100) for val in result_dict.values()])
-
-        class_percentages = np.array(class_percentages)
-        df = pd.DataFrame(class_percentages, columns=classes)
-
-        sns.set_theme(style="darkgrid")
-        plt.figure(figsize=(40, 20))
-        plt.xticks(fontsize=24)
-        plt.yticks(fontsize=24)
-        sns.lineplot(data=df, palette="tab10", linewidth=2.5)
-        plt.show()
+    # def plot_class_percentage(self, window_size: int = 1000):
+    #     classes = self.classes
+    #
+    #     result_dict = {element: 0 for element in classes}
+    #     last_samples = []
+    #     class_percentages = []
+    #
+    #     for x in tqdm(iter(self)):
+    #         if x[1] not in classes:
+    #             continue
+    #
+    #         if len(last_samples) == window_size:
+    #             removed_sample = last_samples.pop(0)
+    #             result_dict[removed_sample] -= 1
+    #
+    #         last_samples.append(x[1])
+    #         result_dict[x[1]] += 1
+    #
+    #         n_samples = len(last_samples)
+    #         class_percentages.append([((val / n_samples) * 100) for val in result_dict.values()])
+    #
+    #     class_percentages = np.array(class_percentages)
+    #     df = pd.DataFrame(class_percentages, columns=classes)
+    #
+    #     sns.set_theme(style="darkgrid")
+    #     plt.figure(figsize=(40, 20))
+    #     plt.xticks(fontsize=24)
+    #     plt.yticks(fontsize=24)
+    #     sns.lineplot(data=df, palette="tab10", linewidth=2.5)
+    #     plt.show()
