@@ -73,14 +73,14 @@ class ExperimentRunner:
         }
     
     def run(self):
-        print("Starting experiment:", self._id)
-
         wandb.init(
             entity=self.entity,
             project=self.project,
             config=self._parameters,
             mode=["disabled", "online"][self._enable_tracker]
         )
+
+        print("Starting experiment:", self._id)
 
         with open(self._meta_path, "x") as file_meta:
             json.dump(self._parameters, file_meta, default=lambda o: repr(o), indent=4)
@@ -102,11 +102,12 @@ class ExperimentRunner:
                 if y_pred is not None:
                     self.metrics.update(y, y_pred)
                     writer_metrics.writerow(self.metrics.get())
+                    
                     wandb.log(self._metrics_dict)
-        
-        wandb.finish()
 
         print("Experiment DONE")
+        wandb.finish()
+
 
     def _metrics_match_dataset(self) -> bool:
         """Check if there exist binary-only metric for multiclass dataset"""

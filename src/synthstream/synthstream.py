@@ -1,5 +1,6 @@
 from random import Random
 from .csampler import ClassSampler
+from river.datasets.base import MULTI_CLF
 
 class NoActiveSamplersError(Exception):
     pass
@@ -17,11 +18,31 @@ class SyntheticStream:
         self.all_labels_set: set(str) = set()
 
         self.last_class_probabilities = None
+        self.last_class_weights = None
         self.last_sample = None
         self.last_label = None
         
         for csampler in init_csamplers: 
             self.add_sampler(csampler)
+            
+    @property
+    def task(self):
+        return MULTI_CLF
+
+    @property
+    def _repr_content(self):
+        """The items that are displayed in the __repr__ method.
+
+        This property can be overridden in order to modify the output of the __repr__ method.
+
+        """
+
+        content = {}
+        content["Name"] = self.__class__.__name__
+        content["Task"] = self.task
+        content["Samples"] = self.max_samples
+        return content
+
 
     def __iter__(self):
         return self
@@ -37,6 +58,10 @@ class SyntheticStream:
     @property
     def class_probabilities(self) -> dict:
         return self.last_class_probabilities
+    
+    @property
+    def class_weights(self) -> dict:
+        return self.last_class_weights
         
     def add_sampler(self, csampler: ClassSampler):
         if csampler.stream_t_start < self.t:
@@ -97,11 +122,16 @@ class SyntheticStream:
         if weight_sum < 1e-9:
             raise ValueError("[!]: Sum of weights in active ClassSamplers is equal to 0.0")
 
+        # TODO: there is probably better way to allow both class_weights and class_probabilities 
+        # without code repetition
+
         # Create dictionary with all classes, set probability to 0.0
         self.last_class_probabilities = dict([(label, 0.0) for label in self.all_labels_set])
+        self.last_class_weights = dict([(label, 0.0) for label in self.all_labels_set])
 
         # Store normalized results for every label
         for w, csampler in zip(weights, active_csamplers):
+            self.last_class_weights[csampler.label] = w
             self.last_class_probabilities[csampler.label] = w / weight_sum
             
         selected_csampler = self._random.choices(active_csamplers, weights, k=1)[0]
