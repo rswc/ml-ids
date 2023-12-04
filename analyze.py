@@ -6,7 +6,7 @@ from collections import defaultdict
 from river import tree
 from tqdm import tqdm
 
-CSV_TEST_FILEPATH = r'cicids2017\all_days.csv'
+CSV_TEST_FILEPATH = r'..\cicids2017\all_days.csv'
 
 if __name__ == '__main__':
     
@@ -39,9 +39,3 @@ if __name__ == '__main__':
         print("Classes:")
         for i, (key, value) in enumerate(counter.items()):
             print(f"[{i}]: ({value}) -> {key}")
-
-
-
-        
-
-
