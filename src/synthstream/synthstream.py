@@ -40,7 +40,7 @@ class SyntheticStream:
         content = {}
         content["Name"] = self.__class__.__name__
         content["Task"] = self.task
-        content["Samples"] = "∞"
+        content["Samples"] = self.max_samples
         return content
 
 
