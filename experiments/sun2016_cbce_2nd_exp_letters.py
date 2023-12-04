@@ -1,18 +1,24 @@
-from river import tree
-from river import metrics
+from river import metrics, linear_model
+from river.forest import ARFClassifier
+from river.ensemble import BaggingClassifier
+from river.tree import HoeffdingTreeClassifier
 from river.metrics.base import Metrics
-from framework import ExperimentRunner
+from framework import ExperimentRunner, DatasetAnalyzer
 from metrics import MetricWrapper
-
 from cbce import CBCE
 from synthstream import ClassSampler, SyntheticStream
-import math
 from ucimlrepo import fetch_ucirepo 
-from river import linear_model
+from copy import deepcopy
+import math
 
 CHUNK_SIZE = 150
 N_SAMPLES = 11 * CHUNK_SIZE
-SEED = 42
+SEED_CBCE = 42
+SEED_SS = 42
+SEED_OB = 42
+SEED_RF = 42
+OUT_DIR = "./out"
+PROJECT = "test-ml-ids"
 
 def extract_samples(X, Y, labels: list[str]) -> dict:
     samples = {label: [] for label in labels}
@@ -32,7 +38,6 @@ def c_prior(t: int, n: int = N_SAMPLES):
     return f1 + f2
 
 if __name__ == '__main__':
-    # fetch dataset 
     letter_recognition = fetch_ucirepo(id=59) 
 
     X = [ x[1].to_dict() for x in letter_recognition.data.features.iterrows() ]
@@ -42,7 +47,7 @@ if __name__ == '__main__':
 
     ss = SyntheticStream(
         max_samples=N_SAMPLES,
-        seed=42, 
+        seed=SEED_SS, 
         init_csamplers=[
             ClassSampler('A', samples=letter_samples['A'], weight_func=lambda t: 1),
             ClassSampler('B', samples=letter_samples['B'], weight_func=lambda t: 1),
@@ -50,8 +55,6 @@ if __name__ == '__main__':
         ]
     )
     
-    model = CBCE(linear_model.LogisticRegression(), seed=42)
-
     my_metrics = Metrics([
         MetricWrapper(
             metric=metrics.F1(),
@@ -76,5 +79,22 @@ if __name__ == '__main__':
             window_size=CHUNK_SIZE,
         )
     ])
-    runner = ExperimentRunner(model, ss, my_metrics, "./out", project='ml-ids', enable_tracker=True)
+
+    ss_copy = deepcopy(ss)
+    analyzer = DatasetAnalyzer(ss_copy, window_size=CHUNK_SIZE, out_dir=OUT_DIR, project=PROJECT)
+    analyzer.analyze()
+
+    ss_copy = deepcopy(ss)
+    cbce = CBCE(linear_model.LogisticRegression(), seed=SEED_CBCE)
+    runner = ExperimentRunner(cbce, ss_copy, my_metrics, out_dir=OUT_DIR, project=PROJECT)
+    runner.run()
+
+    ss_copy = deepcopy(ss)
+    arf = ARFClassifier(seed=SEED_RF)
+    runner = ExperimentRunner(arf, ss_copy, my_metrics, out_dir=OUT_DIR, project=PROJECT)
+    runner.run()
+
+    ss_copy = deepcopy(ss)
+    ob = BaggingClassifier(HoeffdingTreeClassifier(), seed=SEED_OB)
+    runner = ExperimentRunner(ob, ss_copy, my_metrics, out_dir=OUT_DIR, project=PROJECT)
     runner.run()
