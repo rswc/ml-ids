@@ -8,6 +8,27 @@ from collections import Counter
 from collections import deque
 
 class DatasetAnalyzer:
+    """Helper class for analyzing datasets.
+
+    Parameters
+    ----------
+    dataset
+        The river-compatible dataset class for this experiment.
+    window-size
+        Specifies range of class count calculations. Passing `None` implies `window_size = n_samples` 
+    out_dir
+        The directory to which logs will be saved.
+    name
+        (optional) A custom name for this experiment.
+    enable_tracker
+        (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
+        from this experiment online.
+    project
+        (wandb only, optional) The name of the project under which this exepriment should be categorized.
+    entity
+        (wandb only, optional) The entity (user or team) which owns this experiment.
+    
+    """
 
     def __init__(self, dataset: Dataset, window_size: int, out_dir: str, name: str = None, enable_tracker: bool = True, project: str = None, entity: str = None):
         self.dataset = dataset
