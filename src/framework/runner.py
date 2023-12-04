@@ -7,7 +7,6 @@ from river.datasets.base import Dataset, MULTI_CLF
 from river.metrics.base import Metrics, BinaryMetric
 from metrics import MetricWrapper
 import wandb
-from synthstream import SyntheticStream
 
 class ExperimentRunner:
     """Helper class for running experiments in a standardized way.
@@ -74,14 +73,14 @@ class ExperimentRunner:
         }
     
     def run(self):
-        print("Starting experiment:", self._id)
-
         wandb.init(
             entity=self.entity,
             project=self.project,
             config=self._parameters,
             mode=["disabled", "online"][self._enable_tracker]
         )
+
+        print("Starting experiment:", self._id)
 
         with open(self._meta_path, "x") as file_meta:
             json.dump(self._parameters, file_meta, default=lambda o: repr(o), indent=4)
@@ -104,20 +103,11 @@ class ExperimentRunner:
                     self.metrics.update(y, y_pred)
                     writer_metrics.writerow(self.metrics.get())
                     
-                    dataset_dict = {}
-
-                    if isinstance(self.dataset, SyntheticStream):
-                        for c, w in self.dataset.class_weights.items():
-                            dataset_dict[f"ClassWeight({c})"] = w
-                            
-                        for c, p in self.dataset.class_probabilities.items():
-                            dataset_dict[f"ClassProbability({c})"] = p
-
-                    wandb.log({**self._metrics_dict, **dataset_dict})
-
-        wandb.finish()
+                    wandb.log(self._metrics_dict)
 
         print("Experiment DONE")
+        wandb.finish()
+
 
     def _metrics_match_dataset(self) -> bool:
         """Check if there exist binary-only metric for multiclass dataset"""
