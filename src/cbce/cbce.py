@@ -1,13 +1,18 @@
 import random
 from river import base
-from river.drift import NoDrift
+from river.base.drift_detector import BinaryDriftDetector
+
+class NoDrift(base.BinaryDriftAndWarningDetector):
+    
+    def update(self, x: bool) -> BinaryDriftDetector:
+        return self
 
 class CBCE(base.Wrapper, base.Classifier):
 
     def __init__(
             self,
             classifier: base.Classifier,
-            drift_detector: base.BinaryDriftDetector = NoDrift(),
+            drift_detector: base.BinaryDriftAndWarningDetector = NoDrift(),
             decay_factor: float = 0.9,
             disappearance_threshold: float = 0.9 ** 1000,
             seed: int = None
@@ -17,7 +22,7 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
         self.inactive_classifiers: dict[base.typing.ClfTarget, base.Classifier] = {}
-        self.drift_detectors: dict[base.typing.ClfTarget, base.BinaryDriftDetector] = {}
+        self.drift_detectors: dict[base.typing.ClfTarget, base.BinaryDriftAndWarningDetector] = {}
         
         self.decay_factor = decay_factor
         self.disappearance_threshold = disappearance_threshold
@@ -105,8 +110,32 @@ class CBCE(base.Wrapper, base.Classifier):
             pred = self.predict_one(x)
             self.drift_detectors[y].update(pred != y)
 
+            #TODO: if the warning disappears, we should probably clear and stop the buffer
+            if self.drift_detectors[y].warning_detected and y not in self._sample_buffer:
+                self._sample_buffer[y] = [x]
+
             if self.drift_detectors[y].drift_detected:
-                self.__reset_model(y)
+                if y in self._sample_buffer:
+                    self.drift_detectors[y]._reset()
+
+                    buffer_len = len(self._sample_buffer[y])
+
+                    model: base.Classifier = self.classifier.clone()
+
+                    labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
+                    for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
+                        model.learn_one(buffered_x, buffered_y, **kwargs)
+                        
+                    if self.is_active(y):
+                        self.classifiers[y] = model
+                    else:
+                        self.inactive_classifiers[y] = model
+
+                    # Stop buffering
+                    del self._sample_buffer[y]
+                
+                else:
+                    self.__reset_model(y)
 
         return self
     
