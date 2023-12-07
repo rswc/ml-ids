@@ -57,18 +57,10 @@ class CBCE(base.Wrapper, base.Classifier):
 
             else:
                 # Second sample arrived, initilize model
-                buffer_len = len(self._sample_buffer[y])
-
-                model: base.Classifier = self.classifier.clone()
-
-                labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
-                for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
-                    model.learn_one(buffered_x, buffered_y, **kwargs)
-                    
-                self.classifiers[y] = model
+                self.classifiers[y] = self.__init_cb_model(y, **kwargs)
 
                 # Sample buffer contains the two positive samples, hence the -1
-                self._class_priors[y] = 1 / (buffer_len - 1)
+                self._class_priors[y] = 1 / (len(self._sample_buffer[y]) - 1)
 
                 # Stop buffering
                 del self._sample_buffer[y]
@@ -103,7 +95,7 @@ class CBCE(base.Wrapper, base.Classifier):
         for label in disappeared_labels:
             del self.classifiers[label]
 
-        self.__updateCBModels(x, y, **kwargs)
+        self.__update_cb_models(x, y, **kwargs)
 
         # Update drift detector
         if self.is_active(y):
@@ -118,13 +110,7 @@ class CBCE(base.Wrapper, base.Classifier):
                 if y in self._sample_buffer:
                     self.drift_detectors[y]._reset()
 
-                    buffer_len = len(self._sample_buffer[y])
-
-                    model: base.Classifier = self.classifier.clone()
-
-                    labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
-                    for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
-                        model.learn_one(buffered_x, buffered_y, **kwargs)
+                    model = self.__init_cb_model(y, **kwargs)
                         
                     if self.is_active(y):
                         self.classifiers[y] = model
@@ -139,7 +125,7 @@ class CBCE(base.Wrapper, base.Classifier):
 
         return self
     
-    def __updateCBModels(self, x: dict, y: base.typing.ClfTarget, **kwargs):
+    def __update_cb_models(self, x: dict, y: base.typing.ClfTarget, **kwargs):
         for label, model in self.classifiers.items():
             if y == label:
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
@@ -158,6 +144,17 @@ class CBCE(base.Wrapper, base.Classifier):
         self.drift_detectors.pop(y, None)
         self._class_priors.pop(y, None)
         self._sample_buffer.pop(y, None)
+
+    def __init_cb_model(self, y: base.typing.ClfTarget, **kwargs):
+        buffer_len = len(self._sample_buffer[y])
+
+        model: base.Classifier = self.classifier.clone()
+
+        labels = [1 if i == 0 or i == buffer_len - 1 else -1 for i in range(buffer_len)]
+        for buffered_x, buffered_y in zip(self._sample_buffer[y], labels):
+            model.learn_one(buffered_x, buffered_y, **kwargs)
+
+        return model
 
     def predict_proba_one(self, x: dict, **kwargs) -> dict[base.typing.ClfTarget, float]:
         y_pred = {}
