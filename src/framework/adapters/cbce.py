@@ -1,7 +1,7 @@
 from .base import ModelAdapterBase
 from cbce import CBCE
 
-class CBCEAdapter(ModelAdapterBase):
+class CBCEAdapter(ModelAdapterBase[CBCE]):
 
     @classmethod
     def get_target_class(cls):
