@@ -7,6 +7,7 @@ from river.datasets.base import Dataset, MULTI_CLF
 from river.metrics.base import Metrics, BinaryMetric
 from metrics import MetricWrapper
 import wandb
+from framework.adapters.base import ModelAdapterBase
 
 class ExperimentRunner:
     """Helper class for running experiments in a standardized way.
@@ -23,6 +24,8 @@ class ExperimentRunner:
         The directory to which `.csv` logs will be saved.
     name
         (optional) A custom name for this experiment.
+    model_adapter
+        (optional) An adapter class for collecting aditional data from the model
     enable_tracker
         (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
         from this experiment online.
@@ -40,6 +43,7 @@ class ExperimentRunner:
             metrics: Metrics,
             out_dir: str,
             name: str = None,
+            model_adapter: ModelAdapterBase = None,
             enable_tracker: bool = True,
             project: str = None,
             entity: str = None,
@@ -50,6 +54,10 @@ class ExperimentRunner:
         self.out_dir = out_dir
         self.entity = entity
         self.project = project
+
+        self.model_adapter = model_adapter
+        if model_adapter:
+            self.model_adapter.model = model
 
         self._enable_tracker = enable_tracker
 
@@ -102,6 +110,9 @@ class ExperimentRunner:
                 if y_pred is not None:
                     self.metrics.update(y, y_pred)
                     writer_metrics.writerow(self.metrics.get())
+
+                    if self.model_adapter:
+                        wandb.log(self.model_adapter.get_loggable_state(), commit=False)
                     
                     wandb.log(self._metrics_dict)
 
