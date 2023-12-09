@@ -112,7 +112,7 @@ class ExperimentRunner:
                     writer_metrics.writerow(self.metrics.get())
 
                     if self.model_adapter:
-                        wandb.log(self.model_adapter.get_loggable_state(), commit=False)
+                        wandb.log({"Model": self.model_adapter.get_loggable_state()}, commit=False)
                     
                     wandb.log(self._metrics_dict)
 
