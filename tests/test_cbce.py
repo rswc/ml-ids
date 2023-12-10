@@ -95,9 +95,39 @@ class TestCBCE:
         assert model._class_priors["A"] > 0, "Provided wrong prior for reappeared class"
         assert "A" in model.predict_proba_one({"x": 9}), "Failed to provide reappeared class during prediction"
 
-    def test_drift_detector(self):
+    def test_gradual_drift_detector(self):
         """
-        The model should react to concept drift in the classes it tracks.
+        The model should react to gradual concept drift in the classes it tracks.
+        """
+        random.seed(42)
+
+        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM())
+
+        VALUE_BASE = [2, -2]
+        LABEL = ["A", "B"]
+        DATA = [({"x": random.gauss(0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(150)]
+
+        for x, y in DATA:
+            model.learn_one(x, y)
+
+        assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
+
+        NUM_DRIFT_STEPS = 100
+        DRIFT_DIR = [-5, 0]
+        DATA = [({"x": random.gauss(0, 2.0) + VALUE_BASE[i & 1] + DRIFT_DIR[i & 1] * i / NUM_DRIFT_STEPS}, LABEL[i & 1]) for i in range(NUM_DRIFT_STEPS)]
+
+        model_before_drift = model.classifiers['A']
+
+        num_classes = 0
+        for x, y in DATA:
+            model.learn_one(x, y)
+            num_classes += len(model._class_priors)
+
+        assert model.classifiers['A'] is not model_before_drift, "Failed to reinitialize model for class under drift"
+
+    def test_sudden_drift_detector(self):
+        """
+        The model should react to sudden concept drift in the classes it tracks.
         """
         random.seed(42)
 
@@ -115,12 +145,11 @@ class TestCBCE:
         VALUE_BASE = [0, -10]
         DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(30)]
 
+        model_before_drift = model.classifiers['A']
+
         num_classes = 0
         for x, y in DATA:
             model.learn_one(x, y)
             num_classes += len(model._class_priors)
 
-        # According to the paper, whenever drift is detected in a certain class,
-        # the model for that class has to be reinitialized. At the time of writing, 
-        # in our implementation this means removing that class completely
-        assert num_classes < 60, "Failed to evict models for classes under drift"
+        assert model.classifiers['A'] is not model_before_drift, "Failed to reinitialize model for class under drift"
