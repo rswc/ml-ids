@@ -64,6 +64,7 @@ class ExperimentRunner:
         assert metrics.works_with(model), "Invalid metrics for model"
         assert self._metrics_match_dataset(), "Invalid use of binary metric for multiclass dataset"
         assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
+        assert self.dataset.path.is_file(), f"{self.dataset.path} does not exist"
 
         time = datetime.now().strftime("%y-%m-%d_%H%M%S")
         dataset_name = dataset.__class__.__name__
