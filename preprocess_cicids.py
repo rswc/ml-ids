@@ -3,21 +3,36 @@
 from pathlib import Path
 import csv
 from tqdm import tqdm
+from cicids import CICIDS2017
+import sys
 
+DAYS_DIR = 'days'
+DATASET_PATH = Path(CICIDS2017.DEFAULT_DATSET_DIR)
 
-def merge_cicids(cic_dir, result_csv_name):
-    csv_dir = Path(cic_dir)
-    csv_result = csv_dir / result_csv_name
+def merge_cicids(dataset_path: Path = DATASET_PATH, days_dir: str = DAYS_DIR, 
+                 merged_filename: str = CICIDS2017.DEFAULT_MERGED_FILENAME, force: bool = False):
+    """Merge day-related csv's into combined CICIDS2017 dataset csv"""
+    
+    days_path = dataset_path / days_dir
+    merged_path = dataset_path / merged_filename
 
-    with open(csv_result, 'w', newline='') as csvout:
+    assert days_path.is_dir(), f"Directory {days_path} does not exist."
+    
+    if merged_path.is_file():
+        if not force:
+            print(f"[!] {merged_path} already exists, use `force=True` to override. Skipping...")
+            return merged_path
+
+    with open(merged_path, 'w', newline='') as csvout:
         csvwriter = csv.writer(csvout)
         last_id = 0
         first_file = True
 
-        for csv_day in tqdm(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']):
-            csv_filename = csv_dir / f"{csv_day}.csv"
-
+        for weekday in tqdm(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']):
+            csv_filename = days_path / f"{weekday}.csv"
             n_rows = 0
+            
+            assert csv_filename.is_file(), f"File {csv_filename} does not exist!"
 
             with open(csv_filename, 'r') as csvfile:
                 csv_reader = csv.reader(csvfile)
@@ -35,10 +50,24 @@ def merge_cicids(cic_dir, result_csv_name):
                     csvwriter.writerow(new_row)
                     n_rows += 1
             last_id += n_rows
+    return merged_path
 
 
-def convert_attempted_to_benign(input_file, output_file, label_name):
-    with (open(input_file, 'r') as csv_input, open(output_file, 'w', newline='') as csv_output):
+def convert_attempted_to_benign(input_path: Path, output_path: Path = None, label_name = CICIDS2017.LABEL_COLUMN_NAME, force: bool = False):
+    if output_path is None:
+        output_path = input_path.with_stem(f"{input_path.stem}_noatt")
+        
+    if output_path.is_file():
+        if not force:
+            print(f"[!] {output_path} already exists, use `force=True` to override. Skipping...", file=sys.stderr)
+            return output_path
+        
+        output_path.unlink()
+
+    with (
+        open(input_path, 'r') as csv_input, 
+        open(output_path, 'w', newline='') as csv_output
+    ):
         csv_reader = csv.reader(csv_input)
         csv_writer = csv.writer(csv_output)
 
@@ -50,10 +79,25 @@ def convert_attempted_to_benign(input_file, output_file, label_name):
             if "- Attempted" in row[label_index]:
                 row[label_index] = "BENIGN"
             csv_writer.writerow(row)
+            
+    return output_path
 
 
-def create_subset(input_file, output_file, n_samples, start_sample=0):
-    with (open(input_file, 'r') as csv_input, open(output_file, 'w', newline='') as csv_output):
+def create_subset(input_path: Path, n_samples: int, start_sample: int = 0, output_path: Path = None, force: bool = False):
+    if output_path is None:
+        output_path = input_path.with_stem(f"{input_path.stem}_idx={start_sample}_n={n_samples}")
+
+    if output_path.is_file():
+        if not force:
+            print(f"[!] {output_path} already exists, use `force=True` to override. Skipping...", file=sys.stderr)
+            return output_path
+        
+        output_path.unlink()
+
+    with (
+        open(input_path, 'r') as csv_input,
+        open(output_path, 'w', newline='') as csv_output
+    ):
         csv_reader = csv.reader(csv_input)
         csv_writer = csv.writer(csv_output)
 
@@ -68,23 +112,11 @@ def create_subset(input_file, output_file, n_samples, start_sample=0):
                     break
                 csv_writer.writerow(row)
 
+    return output_path
+
 
 if __name__ == '__main__':
-    CIC_DIR = '../cicids2017'
-    RESULT_CSV_NAME = 'all_days.csv'
-
-    input_data = '../cicids2017/all_days_final.csv'
-    final_data = '../cicids2017/graph_test.csv'
-    label_col_name = 'Label'
-
-    # merge_cicids(CIC_DIR, RESULT_CSV_NAME)
-
-    # convert_attempted_to_benign(input_data, final_data, label_col_name)
-
-    create_subset(input_data, final_data, 10000, 100000)
-
-                
-                
-
-        
-
+    merged_path = merge_cicids()
+    noatt_path = convert_attempted_to_benign(input_path=merged_path)
+    subset_path = create_subset(input_path=noatt_path, start_sample=400_000, n_samples=400_000)
+    print("Subset generated at: ", subset_path)

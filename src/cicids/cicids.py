@@ -1,10 +1,6 @@
 from river import stream
 from river.datasets import base
-from tqdm import tqdm
-#import numpy as np
-#import matplotlib.pyplot as plt
-#import seaborn as sns
-#import pandas as pd
+
 
 class CICIDS2017(base.FileDataset):
     """Class used to handle and load the CICIDS2017 dataset.
@@ -12,7 +8,7 @@ class CICIDS2017(base.FileDataset):
     Parameters
     ----------
     n_samples
-`       Number of samples in the dataset.
+        Number of samples in the dataset.
     n_classes
         Number of classes in the dataset. Now works with 16 classes, all attempted attacks are classified as BENIGN.
     n_features
@@ -24,6 +20,11 @@ class CICIDS2017(base.FileDataset):
     directory
         The directory where the file is contained.
     """
+
+    DEFAULT_DATSET_DIR = 'cicids2017'
+    DEFAULT_MERGED_FILENAME = 'all_days.csv'
+    DEFAULT_NOATT_FILENAME = 'all_days_noatt.csv'
+    LABEL_COLUMN_NAME = 'Label'
 
     features = [
         "id",
@@ -232,11 +233,11 @@ class CICIDS2017(base.FileDataset):
         "Attempted Category": int
     },
 
-    def __init__(self, directory='ABSOLUTE_PATH_TO_DATASET_DIRECTORY', filename='all_days_without_attempted.csv', used_features=None):
+    def __init__(self, directory=DEFAULT_DATSET_DIR, filename=DEFAULT_NOATT_FILENAME, used_features=None):
         if used_features is not None:
             self.used_features = used_features
-            if 'Label' not in self.used_features:
-                self.used_features.append('Label')
+            if self.LABEL_COLUMN_NAME not in self.used_features:
+                self.used_features.append(self.LABEL_COLUMN_NAME)
         else:
             self.used_features = [
                 "Flow Duration",
@@ -269,7 +270,7 @@ class CICIDS2017(base.FileDataset):
 
         return stream.iter_csv(
             self.path,
-            target="Label",
+            target=self.LABEL_COLUMN_NAME,
             converters=used_converters,
             drop=drop_features
         )
