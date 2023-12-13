@@ -1,6 +1,6 @@
 ## ML - Intrusion Detection System
 
-- `analyze.py`: extract information from `all_days.csv`
+- `analyze.py`: Extract information from `all_days.csv`
 - `example.py`: Example usage with riverml api 
 
 ## CICIDS2017
