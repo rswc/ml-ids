@@ -232,7 +232,7 @@ class CICIDS2017(base.FileDataset):
         "Attempted Category": int
     },
 
-    def __init__(self, directory='ABSOLUTE_PATH_TO_DATASET_DIRECTORY', filename='all_days_without_attempted.csv', used_features=None):
+    def __init__(self, directory='E:\inzynierka\cicids2017', filename='all_days_without_attempted.csv', used_features=None):
         if used_features is not None:
             self.used_features = used_features
             if 'Label' not in self.used_features:
