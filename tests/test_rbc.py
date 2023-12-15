@@ -1,16 +1,16 @@
 from river import tree
 from math import isclose
-from moob import MOOB
+from rbc import ResamplingBaggingClassifier
 
 
 class TestMOOB:
 
     def test_default_oversampling(self):
-        model = MOOB(tree.HoeffdingTreeClassifier(), seed=42)
+        model = ResamplingBaggingClassifier(tree.HoeffdingTreeClassifier(), seed=42)
         assert model.resampling == "oversampling"
 
     def test_class_priors(self):
-        model = MOOB(tree.HoeffdingTreeClassifier(), seed=42)
+        model = ResamplingBaggingClassifier(tree.HoeffdingTreeClassifier(), seed=42)
 
         DATA = [
             ({'x': 1}, 'A'),
@@ -32,7 +32,7 @@ class TestMOOB:
         assert round(model._class_priors['A'], 2) < 0.2
 
     def test_oversampling(self):
-        model = MOOB(tree.HoeffdingTreeClassifier(), resampling="oversampling", seed=42)
+        model = ResamplingBaggingClassifier(tree.HoeffdingTreeClassifier(), resampling="oversampling", seed=42)
 
         DATA = [
             ({'x': 1}, 'A'),
@@ -55,7 +55,7 @@ class TestMOOB:
         assert isclose(model.predict_proba_one({'x': 1})['B'], 0.5, abs_tol=0.05)
 
     def test_undersampling(self):
-        model = MOOB(tree.HoeffdingTreeClassifier(), resampling="undersampling", seed=42)
+        model = ResamplingBaggingClassifier(tree.HoeffdingTreeClassifier(), resampling="undersampling", seed=42)
 
         DATA = [
             ({'x': 1}, 'A'),

@@ -1,7 +1,7 @@
 from river import ensemble, utils, base
 
 
-class MOOB(ensemble.BaggingClassifier):
+class ResamplingBaggingClassifier(ensemble.BaggingClassifier):
 
     def __init__(
             self,
