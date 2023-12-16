@@ -1,6 +1,7 @@
 from river import stream
 from river.datasets import base
-
+from pathlib import Path
+from utils import get_project_root
 
 class CICIDS2017(base.FileDataset):
     """Class used to handle and load the CICIDS2017 dataset.
@@ -232,8 +233,8 @@ class CICIDS2017(base.FileDataset):
         "Label": str,
         "Attempted Category": int
     },
-
-    def __init__(self, directory=DEFAULT_DATSET_DIR, filename=DEFAULT_NOATT_FILENAME, used_features=None):
+    
+    def __init__(self, filename=DEFAULT_NOATT_FILENAME, dataset_dir: Path = None, used_features=None):
         if used_features is not None:
             self.used_features = used_features
             if self.LABEL_COLUMN_NAME not in self.used_features:
@@ -252,14 +253,28 @@ class CICIDS2017(base.FileDataset):
                 "Bwd Init Win Bytes",
                 "Label",
             ]
+            
+        directory = dataset_dir or self.default_dataset_dir() 
+        directory = directory.resolve()
+        if not Path(directory).is_dir():
+            raise ValueError(f"Specified directory '{directory}' does not exist or is not a valid directory.")
+        
+        dataset_path = Path(directory) / filename
+        if not dataset_path.is_file():
+            raise ValueError(f"Specified dataset file '{dataset_path}' does not exist or is not a valid file.")
+        
         super().__init__(
             n_samples=2099976,
             n_classes=16,  # With all attempted attacks classified as BENIGN
             n_features=len(self.used_features) - 1,  # -1 because label is not a feature in stream
             task=base.MULTI_CLF,
             filename=filename,
-            directory=directory
+            directory=str(directory)
         )
+        
+    @staticmethod
+    def default_dataset_dir() -> Path:
+        return get_project_root() / CICIDS2017.DEFAULT_DATSET_DIR
 
     def __iter__(self):
         drop_features = [feature for feature in self.features if feature not in self.used_features]
