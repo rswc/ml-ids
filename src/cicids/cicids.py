@@ -121,7 +121,7 @@ class CICIDS2017(base.FileDataset):
         "Attempted Category",
     ]
 
-    classes = [
+    plain_classes = [
         'BENIGN',
         'FTP-Patator',
         'SSH-Patator',
@@ -138,6 +138,20 @@ class CICIDS2017(base.FileDataset):
         'Botnet',
         'Portscan',
         'DDoS',
+    ]
+    
+    attempted_classes = [
+        'FTP-Patator - Attempted', 
+        'SSH-Patator - Attempted', 
+        'DoS Slowloris - Attempted', 
+        'DoS Slowhttptest - Attempted', 
+        'DoS Hulk - Attempted', 
+        'DoS GoldenEye - Attempted', 
+        'Web Attack - Brute Force - Attempted', 
+        'Infiltration - Attempted', 
+        'Web Attack - XSS - Attempted', 
+        'Web Attack - SQL Injection - Attempted', 
+        'Botnet - Attempted'
     ]
 
     converters = {
@@ -234,7 +248,9 @@ class CICIDS2017(base.FileDataset):
         "Attempted Category": int
     },
     
-    def __init__(self, filename=DEFAULT_NOATT_FILENAME, dataset_dir: Path = None, used_features=None):
+    def __init__(self, filename: str = None, dataset_dir: Path = None, used_features: list = None, convert_attempted: bool = True, n_samples: int = None):
+        if filename is None:
+            filename = [ CICIDS2017.DEFAULT_MERGED_FILENAME, CICIDS2017.DEFAULT_NOATT_FILENAME ][convert_attempted]
         if used_features is not None:
             self.used_features = used_features
             if self.LABEL_COLUMN_NAME not in self.used_features:
@@ -254,18 +270,24 @@ class CICIDS2017(base.FileDataset):
                 "Label",
             ]
             
-        directory = dataset_dir or self.default_dataset_dir() 
-        directory = directory.resolve()
-        if not Path(directory).is_dir():
+        directory = (dataset_dir or self.default_dataset_dir()).resolve()
+        if not directory.is_dir():
             raise ValueError(f"Specified directory '{directory}' does not exist or is not a valid directory.")
         
-        dataset_path = Path(directory) / filename
-        if not dataset_path.is_file():
-            raise ValueError(f"Specified dataset file '{dataset_path}' does not exist or is not a valid file.")
-        
+        dataset_filepath = directory / filename
+        if not dataset_filepath.is_file():
+            raise ValueError(f"Specified dataset file '{dataset_filepath}' does not exist or is not a valid file.")
+
+        if convert_attempted: 
+            # With all attempted attacks classified as BENIGN
+            self.classes = CICIDS2017.plain_classes
+        else:
+            # Otherwise add all Attempted classes
+            self.classes = CICIDS2017.plain_classes + CICIDS2017.attempted_classes
+
         super().__init__(
-            n_samples=2099976,
-            n_classes=16,  # With all attempted attacks classified as BENIGN
+            n_samples=n_samples or 2099976, # Samples for subset or full dataset
+            n_classes=len(self.classes),  
             n_features=len(self.used_features) - 1,  # -1 because label is not a feature in stream
             task=base.MULTI_CLF,
             filename=filename,
