@@ -6,7 +6,7 @@ import sys
 
 DAYS_DIR = 'days'
 
-def merge_cicids(dataset_path: Path = None, days_dir: str = DAYS_DIR, 
+def _merge_cicids(dataset_path: Path = None, days_dir: str = DAYS_DIR, 
                  merged_filename: str = CICIDS2017.DEFAULT_MERGED_FILENAME, force: bool = False) -> Path:
     """Merge day-related csv's into combined CICIDS2017 dataset csv"""
     
@@ -53,7 +53,7 @@ def merge_cicids(dataset_path: Path = None, days_dir: str = DAYS_DIR,
     return merged_path
 
 
-def convert_attempted_to_benign(input_path: Path, output_path: Path = None, 
+def _convert_attempted_to_benign(input_path: Path, output_path: Path = None, 
                                 label_name = CICIDS2017.LABEL_COLUMN_NAME, force: bool = False) -> Path:
     """ Convert all classes with 'Attempted' suffix to 'BENIGN' """
     if output_path is None:
@@ -85,7 +85,7 @@ def convert_attempted_to_benign(input_path: Path, output_path: Path = None,
     return output_path
 
 
-def create_subset(input_path: Path, start_sample: int , n_samples: int, 
+def _create_subset(input_path: Path, start_sample: int , n_samples: int, 
                   output_path: Path = None, force: bool = False) -> Path:
     """ Create subset of .csv datset starting with `start_sample` index and collecting `n_samples` of examples """
 
@@ -128,12 +128,12 @@ def generate_cicids_file(dataset_path: Path = None, start_sample: int = 0, conve
                          n_samples: int = None, days_dir: str = DAYS_DIR, force: bool = False) -> Path:
     """ Merge, Convert and return CICIDS subset according to given parameters. Setting n_samples = None collects rest of the dataset"""
 
-    file_path = merge_cicids(dataset_path, days_dir, force=force)
+    file_path = _merge_cicids(dataset_path, days_dir, force=force)
     if convert_attempted:
-        file_path = convert_attempted_to_benign(input_path=file_path, force=force)
+        file_path = _convert_attempted_to_benign(input_path=file_path, force=force)
 
     if not (start_sample == 0 and n_samples is None):
-        file_path = create_subset(input_path=file_path, start_sample=start_sample, n_samples=n_samples, force=force)
+        file_path = _create_subset(input_path=file_path, start_sample=start_sample, n_samples=n_samples, force=force)
     return file_path
 
 def predict_cicids_filename(convert_attempted: bool, start_sample: int, n_samples: int) -> str:
