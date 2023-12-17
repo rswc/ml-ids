@@ -3,6 +3,7 @@ from river.datasets import base
 from pathlib import Path
 from utils import get_project_root
 
+
 class CICIDS2017(base.FileDataset):
     """Class used to handle and load the CICIDS2017 dataset.
 
@@ -11,7 +12,7 @@ class CICIDS2017(base.FileDataset):
     n_samples
         Number of samples in the dataset.
     n_classes
-        Number of classes in the dataset. Now works with 16 classes, all attempted attacks are classified as BENIGN.
+        Number of classes in the dataset. Works with 2 variants 27 and 16 classes (all attempted attacks are classified as BENIGN).
     n_features
         Number of features in the dataset.
     task
@@ -22,10 +23,10 @@ class CICIDS2017(base.FileDataset):
         The directory where the file is contained.
     """
 
-    DEFAULT_DATSET_DIR = 'cicids2017'
-    DEFAULT_MERGED_FILENAME = 'all_days.csv'
-    DEFAULT_NOATT_FILENAME = 'all_days_noatt.csv'
-    LABEL_COLUMN_NAME = 'Label'
+    DEFAULT_DATSET_DIR = "cicids2017"
+    DEFAULT_MERGED_FILENAME = "all_days.csv"
+    DEFAULT_NOATT_FILENAME = "all_days_noatt.csv"
+    LABEL_COLUMN_NAME = "Label"
 
     features = [
         "id",
@@ -122,135 +123,147 @@ class CICIDS2017(base.FileDataset):
     ]
 
     plain_classes = [
-        'BENIGN',
-        'FTP-Patator',
-        'SSH-Patator',
-        'DoS Slowloris',
-        'DoS Slowhttptest',
-        'DoS Hulk',
-        'DoS GoldenEye',
-        'Heartbleed',
-        'Web Attack - Brute Force',
-        'Infiltration',
-        'Infiltration - Portscan',
-        'Web Attack - XSS',
-        'Web Attack - SQL Injection',
-        'Botnet',
-        'Portscan',
-        'DDoS',
-    ]
-    
-    attempted_classes = [
-        'FTP-Patator - Attempted', 
-        'SSH-Patator - Attempted', 
-        'DoS Slowloris - Attempted', 
-        'DoS Slowhttptest - Attempted', 
-        'DoS Hulk - Attempted', 
-        'DoS GoldenEye - Attempted', 
-        'Web Attack - Brute Force - Attempted', 
-        'Infiltration - Attempted', 
-        'Web Attack - XSS - Attempted', 
-        'Web Attack - SQL Injection - Attempted', 
-        'Botnet - Attempted'
+        "BENIGN",
+        "FTP-Patator",
+        "SSH-Patator",
+        "DoS Slowloris",
+        "DoS Slowhttptest",
+        "DoS Hulk",
+        "DoS GoldenEye",
+        "Heartbleed",
+        "Web Attack - Brute Force",
+        "Infiltration",
+        "Infiltration - Portscan",
+        "Web Attack - XSS",
+        "Web Attack - SQL Injection",
+        "Botnet",
+        "Portscan",
+        "DDoS",
     ]
 
-    converters = {
-        "id": int,
-        "Flow ID": str,
-        "Src IP": str,
-        "Src Port": int,
-        "Dst IP": str,
-        "Dst Port": int,
-        "Protocol": int,
-        "Timestamp": str,
-        "Flow Duration": int,
-        "Total Fwd Packet": int,
-        "Total Bwd packets": int,
-        "Total Length of Fwd Packet": int,
-        "Total Length of Bwd Packet": int,
-        "Fwd Packet Length Max": int,
-        "Fwd Packet Length Min": int,
-        "Fwd Packet Length Mean": float,
-        "Fwd Packet Length Std": float,
-        "Bwd Packet Length Max": int,
-        "Bwd Packet Length Min": int,
-        "Bwd Packet Length Mean": float,
-        "Bwd Packet Length Std": float,
-        "Flow Bytes/s": float,
-        "Flow Packets/s": float,
-        "Flow IAT Mean": float,
-        "Flow IAT Std": float,
-        "Flow IAT Max": int,
-        "Flow IAT Min": int,
-        "Fwd IAT Total": int,
-        "Fwd IAT Mean": float,
-        "Fwd IAT Std": float,
-        "Fwd IAT Max": int,
-        "Fwd IAT Min": int,
-        "Bwd IAT Total": int,
-        "Bwd IAT Mean": float,
-        "Bwd IAT Std": float,
-        "Bwd IAT Max": int,
-        "Bwd IAT Min": int,
-        "Fwd PSH Flags": int,
-        "Bwd PSH Flags": int,
-        "Fwd URG Flags": int,
-        "Bwd URG Flags": int,
-        "Fwd RST Flags": int,
-        "Bwd RST Flags": int,
-        "Fwd Header Length": int,
-        "Bwd Header Length": int,
-        "Fwd Packets/s": float,
-        "Bwd Packets/s": float,
-        "Packet Length Min": int,
-        "Packet Length Max": int,
-        "Packet Length Mean": float,
-        "Packet Length Std": float,
-        "Packet Length Variance": float,
-        "FIN Flag Count": int,
-        "SYN Flag Count": int,
-        "RST Flag Count": int,
-        "PSH Flag Count": int,
-        "ACK Flag Count": int,
-        "URG Flag Count": int,
-        "CWR Flag Count": int,
-        "ECE Flag Count": int,
-        "Down/Up Ratio": float,
-        "Average Packet Size": float,
-        "Fwd Segment Size Avg": float,
-        "Bwd Segment Size Avg": float,
-        "Fwd Bytes/Bulk Avg": float,
-        "Fwd Packet/Bulk Avg": float,
-        "Fwd Bulk Rate Avg": float,
-        "Bwd Bytes/Bulk Avg": float,
-        "Bwd Packet/Bulk Avg": float,
-        "Bwd Bulk Rate Avg": float,
-        "Subflow Fwd Packets": int,
-        "Subflow Fwd Bytes": int,
-        "Subflow Bwd Packets": int,
-        "Subflow Bwd Bytes": int,
-        "FWD Init Win Bytes": int,
-        "Bwd Init Win Bytes": int,
-        "Fwd Act Data Pkts": int,
-        "Fwd Seg Size Min": int,
-        "Active Mean": float,
-        "Active Std": float,
-        "Active Max": int,
-        "Active Min": int,
-        "Idle Mean": float,
-        "Idle Std": float,
-        "Idle Max": int,
-        "Idle Min": int,
-        "ICMP Code": int,
-        "ICMP Type": int,
-        "Total TCP Flow Time": int,
-        "Label": str,
-        "Attempted Category": int
-    },
-    
-    def __init__(self, filename: str = None, dataset_dir: Path = None, used_features: list = None, convert_attempted: bool = True, n_samples: int = None):
+    attempted_classes = [
+        "FTP-Patator - Attempted",
+        "SSH-Patator - Attempted",
+        "DoS Slowloris - Attempted",
+        "DoS Slowhttptest - Attempted",
+        "DoS Hulk - Attempted",
+        "DoS GoldenEye - Attempted",
+        "Web Attack - Brute Force - Attempted",
+        "Infiltration - Attempted",
+        "Web Attack - XSS - Attempted",
+        "Web Attack - SQL Injection - Attempted",
+        "Botnet - Attempted",
+    ]
+
+    converters = (
+        {
+            "id": int,
+            "Flow ID": str,
+            "Src IP": str,
+            "Src Port": int,
+            "Dst IP": str,
+            "Dst Port": int,
+            "Protocol": int,
+            "Timestamp": str,
+            "Flow Duration": int,
+            "Total Fwd Packet": int,
+            "Total Bwd packets": int,
+            "Total Length of Fwd Packet": int,
+            "Total Length of Bwd Packet": int,
+            "Fwd Packet Length Max": int,
+            "Fwd Packet Length Min": int,
+            "Fwd Packet Length Mean": float,
+            "Fwd Packet Length Std": float,
+            "Bwd Packet Length Max": int,
+            "Bwd Packet Length Min": int,
+            "Bwd Packet Length Mean": float,
+            "Bwd Packet Length Std": float,
+            "Flow Bytes/s": float,
+            "Flow Packets/s": float,
+            "Flow IAT Mean": float,
+            "Flow IAT Std": float,
+            "Flow IAT Max": int,
+            "Flow IAT Min": int,
+            "Fwd IAT Total": int,
+            "Fwd IAT Mean": float,
+            "Fwd IAT Std": float,
+            "Fwd IAT Max": int,
+            "Fwd IAT Min": int,
+            "Bwd IAT Total": int,
+            "Bwd IAT Mean": float,
+            "Bwd IAT Std": float,
+            "Bwd IAT Max": int,
+            "Bwd IAT Min": int,
+            "Fwd PSH Flags": int,
+            "Bwd PSH Flags": int,
+            "Fwd URG Flags": int,
+            "Bwd URG Flags": int,
+            "Fwd RST Flags": int,
+            "Bwd RST Flags": int,
+            "Fwd Header Length": int,
+            "Bwd Header Length": int,
+            "Fwd Packets/s": float,
+            "Bwd Packets/s": float,
+            "Packet Length Min": int,
+            "Packet Length Max": int,
+            "Packet Length Mean": float,
+            "Packet Length Std": float,
+            "Packet Length Variance": float,
+            "FIN Flag Count": int,
+            "SYN Flag Count": int,
+            "RST Flag Count": int,
+            "PSH Flag Count": int,
+            "ACK Flag Count": int,
+            "URG Flag Count": int,
+            "CWR Flag Count": int,
+            "ECE Flag Count": int,
+            "Down/Up Ratio": float,
+            "Average Packet Size": float,
+            "Fwd Segment Size Avg": float,
+            "Bwd Segment Size Avg": float,
+            "Fwd Bytes/Bulk Avg": float,
+            "Fwd Packet/Bulk Avg": float,
+            "Fwd Bulk Rate Avg": float,
+            "Bwd Bytes/Bulk Avg": float,
+            "Bwd Packet/Bulk Avg": float,
+            "Bwd Bulk Rate Avg": float,
+            "Subflow Fwd Packets": int,
+            "Subflow Fwd Bytes": int,
+            "Subflow Bwd Packets": int,
+            "Subflow Bwd Bytes": int,
+            "FWD Init Win Bytes": int,
+            "Bwd Init Win Bytes": int,
+            "Fwd Act Data Pkts": int,
+            "Fwd Seg Size Min": int,
+            "Active Mean": float,
+            "Active Std": float,
+            "Active Max": int,
+            "Active Min": int,
+            "Idle Mean": float,
+            "Idle Std": float,
+            "Idle Max": int,
+            "Idle Min": int,
+            "ICMP Code": int,
+            "ICMP Type": int,
+            "Total TCP Flow Time": int,
+            "Label": str,
+            "Attempted Category": int,
+        },
+    )
+
+    def __init__(
+        self,
+        filename: str = None,
+        dataset_dir: Path = None,
+        used_features: list = None,
+        convert_attempted: bool = True,
+        n_samples: int = None,
+    ):
         if filename is None:
-            filename = [ CICIDS2017.DEFAULT_MERGED_FILENAME, CICIDS2017.DEFAULT_NOATT_FILENAME ][convert_attempted]
+            filename = [
+                CICIDS2017.DEFAULT_MERGED_FILENAME,
+                CICIDS2017.DEFAULT_NOATT_FILENAME,
+            ][convert_attempted]
         if used_features is not None:
             self.used_features = used_features
             if self.LABEL_COLUMN_NAME not in self.used_features:
@@ -269,16 +282,20 @@ class CICIDS2017(base.FileDataset):
                 "Bwd Init Win Bytes",
                 "Label",
             ]
-            
+
         directory = (dataset_dir or self.default_dataset_dir()).resolve()
         if not directory.is_dir():
-            raise ValueError(f"Specified directory '{directory}' does not exist or is not a valid directory.")
-        
+            raise ValueError(
+                f"Specified directory '{directory}' does not exist or is not a valid directory."
+            )
+
         dataset_filepath = directory / filename
         if not dataset_filepath.is_file():
-            raise ValueError(f"Specified dataset file '{dataset_filepath}' does not exist or is not a valid file.")
+            raise ValueError(
+                f"Specified dataset file '{dataset_filepath}' does not exist or is not a valid file."
+            )
 
-        if convert_attempted: 
+        if convert_attempted:
             # With all attempted attacks classified as BENIGN
             self.classes = CICIDS2017.plain_classes
         else:
@@ -286,20 +303,23 @@ class CICIDS2017(base.FileDataset):
             self.classes = CICIDS2017.plain_classes + CICIDS2017.attempted_classes
 
         super().__init__(
-            n_samples=n_samples or 2099976, # Samples for subset or full dataset
-            n_classes=len(self.classes),  
-            n_features=len(self.used_features) - 1,  # -1 because label is not a feature in stream
+            n_samples=n_samples or 2099976,  # Samples for subset or full dataset
+            n_classes=len(self.classes),
+            # -1 because label is not a feature in stream
+            n_features=len(self.used_features) - 1,
             task=base.MULTI_CLF,
             filename=filename,
-            directory=str(directory)
+            directory=str(directory),
         )
-        
+
     @staticmethod
     def default_dataset_dir() -> Path:
         return get_project_root() / CICIDS2017.DEFAULT_DATSET_DIR
 
     def __iter__(self):
-        drop_features = [feature for feature in self.features if feature not in self.used_features]
+        drop_features = [
+            feature for feature in self.features if feature not in self.used_features
+        ]
 
         used_converters = {}
         for key in self.used_features:
@@ -309,36 +329,5 @@ class CICIDS2017(base.FileDataset):
             self.path,
             target=self.LABEL_COLUMN_NAME,
             converters=used_converters,
-            drop=drop_features
+            drop=drop_features,
         )
-
-    # def plot_class_percentage(self, window_size: int = 1000):
-    #     classes = self.classes
-    #
-    #     result_dict = {element: 0 for element in classes}
-    #     last_samples = []
-    #     class_percentages = []
-    #
-    #     for x in tqdm(iter(self)):
-    #         if x[1] not in classes:
-    #             continue
-    #
-    #         if len(last_samples) == window_size:
-    #             removed_sample = last_samples.pop(0)
-    #             result_dict[removed_sample] -= 1
-    #
-    #         last_samples.append(x[1])
-    #         result_dict[x[1]] += 1
-    #
-    #         n_samples = len(last_samples)
-    #         class_percentages.append([((val / n_samples) * 100) for val in result_dict.values()])
-    #
-    #     class_percentages = np.array(class_percentages)
-    #     df = pd.DataFrame(class_percentages, columns=classes)
-    #
-    #     sns.set_theme(style="darkgrid")
-    #     plt.figure(figsize=(40, 20))
-    #     plt.xticks(fontsize=24)
-    #     plt.yticks(fontsize=24)
-    #     sns.lineplot(data=df, palette="tab10", linewidth=2.5)
-    #     plt.show()
