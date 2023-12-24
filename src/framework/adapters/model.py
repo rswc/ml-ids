@@ -25,20 +25,23 @@ class CBCEAdapter(ModelAdapterBase[CBCE]):
         return CBCE
     
     def get_loggable_state(self) -> dict:
-        for cls in self._model.drift_detectors.keys():
-            if cls not in self._drift_adapters:
-                self._drift_adapters[cls] = self._drift_adapter()
-            
-            self._drift_adapters[cls].model = self._model.drift_detectors[cls]
-
-        drift = {cls: self._drift_adapters[cls].get_loggable_state() for cls in self._drift_adapters if cls in self._model.classifiers.keys()}
-
-        return {
+        state = {
             "class_priors": self._model._class_priors,
-            
-            # Log state for active classes only
-            "drift": {cls: stats for cls, stats in drift.items() if stats is not None}
         }
+
+        if self._drift_adapter is not None:
+            for cls in self._model.drift_detectors.keys():
+                if cls not in self._drift_adapters:
+                    self._drift_adapters[cls] = self._drift_adapter()
+                
+                self._drift_adapters[cls].model = self._model.drift_detectors[cls]
+
+            drift = {cls: self._drift_adapters[cls].get_loggable_state() for cls in self._drift_adapters if cls in self._model.classifiers.keys()}
+
+            # Log state for active classes only
+            state["drift"] = {cls: stats for cls, stats in drift.items() if stats is not None}
+
+        return state
 
 class ARFAdapter(ModelAdapterBase[ARFClassifier]):
 
