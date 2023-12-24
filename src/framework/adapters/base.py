@@ -1,8 +1,8 @@
 import abc
 from typing import Generic, TypeVar, Type
+from river.base.drift_detector import DriftDetector
 
 MODEL = TypeVar("MODEL")
-DRIFT = TypeVar("DRIFT")
 
 class ModelAdapterBase(abc.ABC, Generic[MODEL]):
 
@@ -30,7 +30,7 @@ class ModelAdapterBase(abc.ABC, Generic[MODEL]):
     def get_loggable_state(self) -> dict:
         """Return a dict with a subset of the model's state determined interesting to log."""
 
-class DriftModelAdapterBase(Generic[MODEL, DRIFT], ModelAdapterBase[MODEL]):
+class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
     """Helper extension to support integrating adapters for model's inner drift detector."""
 
     def __init__(self, drift_adapter: Type[ModelAdapterBase] = None) -> None:
@@ -39,11 +39,11 @@ class DriftModelAdapterBase(Generic[MODEL, DRIFT], ModelAdapterBase[MODEL]):
         self._drift_adapters: dict[str, ModelAdapterBase] = dict()
 
     @abc.abstractmethod
-    def _get_drift_prototype(self) -> Type[DRIFT]:
+    def _get_drift_prototype(self, model: MODEL) -> DriftDetector:
         """Access the model's "prototype" drift detector."""
 
     @abc.abstractmethod
-    def _get_drift_detectors(self) -> dict[str, DRIFT]:
+    def _get_drift_detectors(self) -> dict[str, DriftDetector]:
         """Access the model's drift detector list."""
 
     def add_drift_state(self, state: dict, active_classes: list[str] = None):
@@ -57,13 +57,17 @@ class DriftModelAdapterBase(Generic[MODEL, DRIFT], ModelAdapterBase[MODEL]):
             drift = {cls: self._drift_adapters[cls].get_loggable_state() for cls in self._drift_adapters}
 
             # Log state for active classes only
-            state["drift"] = {cls: stats for cls, stats in drift.items() if stats is not None and (active_classes is None or cls in active_classes)}
+            state[f"drift.{self._get_drift_prototype(self._model).__class__.__name__}"] = {
+                cls: stats
+                for cls, stats in drift.items()
+                if stats is not None and (active_classes is None or cls in active_classes)
+            }
         
         return state
 
     @ModelAdapterBase.model.setter
     def model(self, model: MODEL):
-        if self._drift_adapter is not None and not isinstance(self._get_drift_prototype(), self._drift_adapter.get_target_class()):
-            raise ValueError(f"Model with {self._get_drift_prototype().__class__.__name__} as drift detector was provided to an adapter expecting {self._drift_adapter.__name__}")
+        if self._drift_adapter is not None and not isinstance(self._get_drift_prototype(model), self._drift_adapter.get_target_class()):
+            raise ValueError(f"Model with {self._get_drift_prototype(model).__class__.__name__} as drift detector was provided to an adapter expecting {self._drift_adapter.__name__}")
 
         super(__class__, self.__class__).model.__set__(self, model)
