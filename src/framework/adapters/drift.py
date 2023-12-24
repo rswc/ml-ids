@@ -11,7 +11,17 @@ class DDMAdapter(ModelAdapterBase[DDM]):
     def get_loggable_state(self) -> dict:
         p = self._model._p.get()
         n = self._model._p.n
+
+        if n < 1:
+            return None
+
         s = math.sqrt(p * (1 - p) / n)
+
+        if self._model._p_min is None:
+            return {
+                "error_probability": p,
+                "ps": p + s,
+            }
 
         return {
             "error_probability": p,
