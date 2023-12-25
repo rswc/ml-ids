@@ -8,6 +8,7 @@ from river.metrics.base import Metrics, BinaryMetric
 from metrics import MetricWrapper
 import wandb
 from framework.adapters.base import ModelAdapterBase
+from framework.util import *
 
 class ExperimentRunner:
     """Helper class for running experiments in a standardized way.
@@ -132,14 +133,10 @@ class ExperimentRunner:
                 if not m.works_with_multiclass:
                     return False
         return True
-
-    def __extract_metric_name(self, metric) -> str:
-        """Extract name of the metric using method compliant with `MetricWrapper` based on `Metric` __repr__"""
-        return str(metric).split(':')[0]
     
     @property
     def _metrics_names(self):
-        return [ self.__extract_metric_name(metric) for metric in self.metrics]
+        return [extract_metric_name(metric) for metric in self.metrics]
     
     @property
     def _metrics_path(self):
@@ -152,4 +149,4 @@ class ExperimentRunner:
     @property
     def _metrics_dict(self):
         """Current values of the metrics, as a Python dict"""
-        return dict(zip(self._metrics_names, self.metrics.get()))
+        return get_metrics_dict(self.metrics)
