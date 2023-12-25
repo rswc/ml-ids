@@ -113,6 +113,7 @@ class ExperimentRunner:
                     writer_metrics.writerow(self.metrics.get())
 
                     if self.model_adapter:
+                        self.model_adapter.update(y, y_pred)
                         wandb.log({f"Model.{self.model.__class__.__name__}": self.model_adapter.get_loggable_state()}, commit=False)
                     
                     wandb.log(self._metrics_dict)
