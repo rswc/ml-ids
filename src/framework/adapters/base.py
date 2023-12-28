@@ -8,6 +8,12 @@ class ModelAdapterBase(abc.ABC, Generic[MODEL]):
 
     def __init__(self) -> None:
         self._model = None
+    
+    def get_parameters(self) -> dict:
+        """The adapter's parameters"""
+        return {
+            "name": self.__class__.__name__
+        }
 
     @property
     def model(self) -> MODEL:
@@ -37,6 +43,12 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         super().__init__()
         self._drift_adapter = drift_adapter
         self._drift_adapters: dict[str, ModelAdapterBase] = dict()
+    
+    def get_parameters(self) -> dict:
+        return {
+            **super().get_parameters(),
+            "drift_adapter_name": self._drift_adapter.__name__
+        }
 
     @abc.abstractmethod
     def _get_drift_prototype(self, model: MODEL) -> DriftDetector:
