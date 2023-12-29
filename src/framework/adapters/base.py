@@ -35,6 +35,9 @@ class ModelAdapterBase(abc.ABC, Generic[MODEL]):
     @abc.abstractmethod
     def get_loggable_state(self) -> dict:
         """Return a dict with a subset of the model's state determined interesting to log."""
+    
+    def update(self, y, y_pred) -> None:
+        """Call this at the end of each time step, to let the adapter know it needs to update its state."""
 
 class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
     """Helper extension to support integrating adapters for model's inner drift detector."""
