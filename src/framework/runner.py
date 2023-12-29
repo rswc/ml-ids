@@ -78,7 +78,8 @@ class ExperimentRunner:
             "model": self.model.__class__.__name__,
             "hyperparameters": self.model._get_params(),
             "dataset": self.dataset._repr_content,
-            "metrics": self._metrics_names
+            "metrics": self._metrics_names,
+            "adapter": self.model_adapter.get_parameters() if self.model_adapter else None
         }
     
     def run(self):
