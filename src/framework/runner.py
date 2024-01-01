@@ -97,7 +97,7 @@ class ExperimentRunner:
             config=self._parameters,
             mode=["disabled", "online"][self._enable_tracker],
             notes=self.notes,
-            tags=self.tags
+            tags=[*self._autotags, *self.tags]
         )
 
         print("Starting experiment:", self._id)
@@ -162,3 +162,14 @@ class ExperimentRunner:
     def _metrics_dict(self):
         """Current values of the metrics, as a Python dict"""
         return get_metrics_dict(self.metrics)
+    
+    @property
+    def _autotags(self):
+        """Tags which will automatically be added to this run, for easier filtering."""
+        
+        #TODO: Get more detailed tags from adapter?
+        
+        return [
+            f"model:{self.model.__class__.__name__}",
+            f"data:{self.dataset.__class__.__name__}"
+        ]
