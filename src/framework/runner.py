@@ -34,6 +34,10 @@ class ExperimentRunner:
         (wandb only, optional) The name of the project under which this exepriment should be categorized.
     entity
         (wandb only, optional) The entity (user or team) which owns this experiment.
+    notes
+        (wandb only, optional) Freeform notes about this experiment.
+    tags
+        (wandb only, optional) Tags which will be shown on this experiment.
     
     """
 
@@ -48,6 +52,8 @@ class ExperimentRunner:
             enable_tracker: bool = True,
             project: str = None,
             entity: str = None,
+            notes: str = None,
+            tags: list[str] = None
         ) -> None:
         self.model = model
         self.dataset = dataset
@@ -55,6 +61,8 @@ class ExperimentRunner:
         self.out_dir = out_dir
         self.entity = entity
         self.project = project
+        self.notes = notes
+        self.tags = tags
 
         self.model_adapter = model_adapter
         if model_adapter:
@@ -87,7 +95,9 @@ class ExperimentRunner:
             entity=self.entity,
             project=self.project,
             config=self._parameters,
-            mode=["disabled", "online"][self._enable_tracker]
+            mode=["disabled", "online"][self._enable_tracker],
+            notes=self.notes,
+            tags=[*self._autotags, *self.tags]
         )
 
         print("Starting experiment:", self._id)
@@ -152,3 +162,14 @@ class ExperimentRunner:
     def _metrics_dict(self):
         """Current values of the metrics, as a Python dict"""
         return get_metrics_dict(self.metrics)
+    
+    @property
+    def _autotags(self):
+        """Tags which will automatically be added to this run, for easier filtering."""
+        
+        #TODO: Get more detailed tags from adapter?
+        
+        return [
+            f"model:{self.model.__class__.__name__}",
+            f"data:{self.dataset.__class__.__name__}"
+        ]

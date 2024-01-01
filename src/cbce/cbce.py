@@ -97,32 +97,6 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.__update_cb_models(x, y, **kwargs)
 
-        # Update drift detector
-        if self.is_active(y):
-            pred = self.predict_one(x)
-            self.drift_detectors[y].update(pred != y)
-
-            #TODO: if the warning disappears, we should probably clear and stop the buffer
-            if self.drift_detectors[y].warning_detected and y not in self._sample_buffer:
-                self._sample_buffer[y] = [x]
-
-            if self.drift_detectors[y].drift_detected:
-                if y in self._sample_buffer:
-                    self.drift_detectors[y]._reset()
-
-                    model = self.__init_cb_model(y, **kwargs)
-                        
-                    if self.is_active(y):
-                        self.classifiers[y] = model
-                    else:
-                        self.inactive_classifiers[y] = model
-
-                    # Stop buffering
-                    del self._sample_buffer[y]
-                
-                else:
-                    self.__reset_model(y)
-
         return self
     
     def __update_cb_models(self, x: dict, y: base.typing.ClfTarget, **kwargs):
@@ -130,6 +104,7 @@ class CBCE(base.Wrapper, base.Classifier):
             if y == label:
                 self._class_priors[y] = self.decay_factor * self._class_priors[y] + 1 - self.decay_factor
                 model.learn_one(x, 1, **kwargs)
+                self.__update_drift_detector(x, label, **kwargs)
 
             else:
                 self._class_priors[label] *= self.decay_factor
@@ -137,6 +112,32 @@ class CBCE(base.Wrapper, base.Classifier):
 
                 if self._random.random() < p:
                     model.learn_one(x, -1, **kwargs)
+                    self.__update_drift_detector(x, label, **kwargs)
+    
+    def __update_drift_detector(self, x: dict, y: base.typing.ClfTarget, **kwargs):
+        pred = self.predict_one(x)
+        self.drift_detectors[y].update(pred != y)
+
+        #TODO: if the warning disappears, we should probably clear and stop the buffer
+        if self.drift_detectors[y].warning_detected and y not in self._sample_buffer:
+            self._sample_buffer[y] = [x]
+
+        if self.drift_detectors[y].drift_detected:
+            if y in self._sample_buffer:
+                self.drift_detectors[y]._reset()
+
+                model = self.__init_cb_model(y, **kwargs)
+                    
+                if self.is_active(y):
+                    self.classifiers[y] = model
+                else:
+                    self.inactive_classifiers[y] = model
+
+                # Stop buffering
+                del self._sample_buffer[y]
+            
+            else:
+                self.__reset_model(y)
 
     def __reset_model(self, y: base.typing.ClfTarget):
         self.classifiers.pop(y, None)

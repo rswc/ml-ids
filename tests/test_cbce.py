@@ -112,7 +112,7 @@ class TestCBCE:
 
         assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
 
-        NUM_DRIFT_STEPS = 100
+        NUM_DRIFT_STEPS = 200
         DRIFT_DIR = [-5, 0]
         DATA = [({"x": random.gauss(0, 2.0) + VALUE_BASE[i & 1] + DRIFT_DIR[i & 1] * i / NUM_DRIFT_STEPS}, LABEL[i & 1]) for i in range(NUM_DRIFT_STEPS)]
 
@@ -143,7 +143,7 @@ class TestCBCE:
         assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
 
         VALUE_BASE = [0, -10]
-        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(30)]
+        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(100)]
 
         model_before_drift = model.classifiers['A']
 
