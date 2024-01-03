@@ -27,7 +27,13 @@ class MetricWrapper(ClassificationMetric):
         self.collapse_classes = sorted(collapse_classes)
 
         self.is_rolling = False
-        self.is_collapsed = False 
+        self.is_collapsed = False
+
+        #HACK: If metric is already wrapped in Rolling, unwrap so it can be
+        #correctly wrapped again. This can happen when cloning the MetricWrapper.
+        if isinstance(metric, Rolling):
+            metric = metric.obj
+
         self.is_multiclass = isinstance(metric, MultiClassMetric)
         self.is_binary = isinstance(metric, BinaryMetric)
         

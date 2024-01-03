@@ -1,7 +1,11 @@
+import base64
+from copy import deepcopy
+from pathos.multiprocessing import Pool
 import os
 from datetime import datetime
 import csv
 import json
+from typing import Iterable
 from river.base import Classifier
 from river.datasets.base import Dataset, MULTI_CLF
 from river.metrics.base import Metrics, BinaryMetric
@@ -10,7 +14,52 @@ import wandb
 from framework.adapters.base import ModelAdapterBase
 from framework.util import *
 
-class ExperimentRunner:
+class BaseRunner:
+
+    def __init__(
+            self,
+            model: Classifier,
+            dataset: Dataset,
+            metrics: Metrics,
+            out_dir: str,
+            model_adapter: ModelAdapterBase = None,
+            enable_tracker: bool = True,
+            project: str = None,
+            entity: str = None,
+            notes: str = None,
+            tags: list[str] = None
+        ) -> None:
+        self.model = model
+        self.dataset = dataset
+        self.metrics = metrics
+        self.out_dir = out_dir
+        self.entity = entity
+        self.project = project
+        self.notes = notes
+        self.tags = tags or []
+
+        self.model_adapter = model_adapter
+
+        self._enable_tracker = enable_tracker
+
+        assert metrics.works_with(model), "Invalid metrics for model"
+        assert self._metrics_match_dataset(), "Invalid use of binary metric for multiclass dataset"
+        assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
+
+    def _metrics_match_dataset(self) -> bool:
+        """Check if binary metrics were requested with multiclass dataset"""
+        if self.dataset.task != MULTI_CLF:
+            return True
+        
+        for m in self.metrics:
+            if isinstance(m, BinaryMetric): 
+                return False
+            elif isinstance(m, MetricWrapper):
+                if not m.works_with_multiclass:
+                    return False
+        return True
+
+class ExperimentRunner(BaseRunner):
     """Helper class for running experiments in a standardized way.
 
     Parameters
@@ -55,24 +104,21 @@ class ExperimentRunner:
             notes: str = None,
             tags: list[str] = None
         ) -> None:
-        self.model = model
-        self.dataset = dataset
-        self.metrics = metrics
-        self.out_dir = out_dir
-        self.entity = entity
-        self.project = project
-        self.notes = notes
-        self.tags = tags
+        super().__init__(
+            model=model,
+            dataset=dataset,
+            metrics=metrics,
+            out_dir=out_dir,
+            model_adapter=model_adapter,
+            enable_tracker=enable_tracker,
+            project=project,
+            entity=entity,
+            notes=notes,
+            tags=tags
+        )
 
-        self.model_adapter = model_adapter
         if model_adapter:
             self.model_adapter.model = model
-
-        self._enable_tracker = enable_tracker
-
-        assert metrics.works_with(model), "Invalid metrics for model"
-        assert self._metrics_match_dataset(), "Invalid use of binary metric for multiclass dataset"
-        assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
 
         time = datetime.now().strftime("%y-%m-%d_%H%M%S")
         dataset_name = dataset.__class__.__name__
@@ -131,20 +177,6 @@ class ExperimentRunner:
 
         print("Experiment DONE")
         wandb.finish()
-
-
-    def _metrics_match_dataset(self) -> bool:
-        """Check if there exist binary-only metric for multiclass dataset"""
-        if self.dataset.task != MULTI_CLF:
-            return True
-        
-        for m in self.metrics:
-            if isinstance(m, BinaryMetric): 
-                return False
-            elif isinstance(m, MetricWrapper):
-                if not m.works_with_multiclass:
-                    return False
-        return True
     
     @property
     def _metrics_names(self):
@@ -173,3 +205,95 @@ class ExperimentRunner:
             f"model:{self.model.__class__.__name__}",
             f"data:{self.dataset.__class__.__name__}"
         ]
+
+class HyperparameterScanRunner(BaseRunner):
+    """Helper class for generating & running multiple `ExperimentRunner` instances, to test
+    influence of given hyperparameters on the given model's behavior.
+
+    Parameters
+    ----------
+    model
+        The river-compatible classifier to be tested.
+    dataset
+        The river-compatible dataset class for this experiment.
+    metrics
+        A `river.metrics.base.Metrics` object containing a group of metrics to be collected.
+    out_dir
+        The directory to which `.csv` logs will be saved.
+    name
+        (optional) A custom name for this experiment.
+    model_adapter
+        (optional) An adapter class for collecting aditional data from the model
+    enable_tracker
+        (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
+        from this experiment online.
+    project
+        (wandb only, optional) The name of the project under which this exepriment should be categorized.
+    entity
+        (wandb only, optional) The entity (user or team) which owns this experiment.
+    notes
+        (wandb only, optional) Freeform notes about this experiment.
+    tags
+        (wandb only, optional) Tags which will be shown on this experiment.
+
+    """
+    
+    @property
+    def __dataset(self):
+        return deepcopy(self.dataset)
+    
+    def __flatten_paramsets(paramsets: dict):
+        #TODO: different flattening strategies, e.g. cartesian product?
+
+        return [{hyperparam: val} for hyperparam, vals in paramsets.items() for val in vals]
+
+    def _run_instance(self, paramset: dict):
+        model = self.model.clone(new_params=paramset)
+
+        param_tags = [f"param:{p}" for p in paramset.keys()]
+
+        user_notes = f"\n{self.notes}" if self.notes is not None else ""
+
+        name = base64.urlsafe_b64encode(str(paramset).encode())
+
+        runner = ExperimentRunner(
+            model=model,
+            dataset=self.__dataset,
+            metrics=self.metrics.clone(),
+            out_dir=self.out_dir,
+            name=name,
+            model_adapter=self.model_adapter,
+            enable_tracker=self._enable_tracker,
+            project=self.project,
+            notes=f"Generated via HyperparameterScanRunner with {paramset}.{user_notes}",
+            tags=["hparam-scan", *param_tags, *self.tags]
+        )
+        runner.run()
+
+    def run(self, hyperparameters: dict[str, list] | Iterable[dict[str, list]], parallel_workers: int = 1) -> None:
+        """Start the hyperparameter scan.
+        
+        Parameters
+        ----------
+        hyperparameters
+            If dict mapping hyperparameter names to lists of values: will generate separate series
+            of test runs for each hyperparameter, with each instance having that parameter set
+            to one of the listed values, leaving all others as defined on the provided `model`.
+            If list of dicts, will generate a test run for each dict, overriding
+            the provided `model`'s parameters with those specified by each of the dicts.
+        parallel_workers
+            (default: 1) If equal to 2 or greater, experiment instances will be run using
+            a `multiprocessing` `Pool` of this many processes.
+
+        """
+
+        if isinstance(hyperparameters, dict):
+            hyperparameters = HyperparameterScanRunner.__flatten_paramsets(hyperparameters)
+        
+        if parallel_workers >= 2:
+            with Pool(parallel_workers) as p:
+                p.map(self._run_instance, hyperparameters)
+
+        else:
+            for paramset in hyperparameters:
+                self._run_instance(paramset)

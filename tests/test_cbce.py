@@ -105,7 +105,7 @@ class TestCBCE:
 
         VALUE_BASE = [2, -2]
         LABEL = ["A", "B"]
-        DATA = [({"x": random.gauss(0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(150)]
+        DATA = [({"x": random.gauss(0, 1.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(400)]
 
         for x, y in DATA:
             model.learn_one(x, y)
@@ -113,8 +113,8 @@ class TestCBCE:
         assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
 
         NUM_DRIFT_STEPS = 200
-        DRIFT_DIR = [-5, 0]
-        DATA = [({"x": random.gauss(0, 2.0) + VALUE_BASE[i & 1] + DRIFT_DIR[i & 1] * i / NUM_DRIFT_STEPS}, LABEL[i & 1]) for i in range(NUM_DRIFT_STEPS)]
+        DRIFT_DIR = [-20, 0]
+        DATA = [({"x": random.gauss(0, 1.0) + VALUE_BASE[i & 1] + DRIFT_DIR[i & 1] * i / NUM_DRIFT_STEPS}, LABEL[i & 1]) for i in range(NUM_DRIFT_STEPS)]
 
         model_before_drift = model.classifiers['A']
 
