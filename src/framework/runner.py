@@ -240,6 +240,11 @@ class HyperparameterScanRunner(BaseRunner):
     def __dataset(self):
         return deepcopy(self.dataset)
     
+    def __flatten_paramsets(paramsets: dict):
+        #TODO: different flattening strategies, e.g. cartesian product?
+
+        return [{hyperparam: val} for hyperparam, vals in paramsets.items() for val in vals]
+    
     def run(self, hyperparameters: dict[str, list] | Iterable[dict[str, list]]) -> None:
         """Start the hyperparameter scan.
         
@@ -255,39 +260,22 @@ class HyperparameterScanRunner(BaseRunner):
         """
 
         if isinstance(hyperparameters, dict):
-            for hyperparam, values in hyperparameters.items():
-                for value in values:
-                    model = self.model.clone(new_params={hyperparam: value})
-                    
-                    runner = ExperimentRunner(
-                        model=model,
-                        dataset=self.__dataset,
-                        metrics=self.metrics.clone(),
-                        out_dir=self.out_dir,
-                        name=f"{hyperparam}={value}",
-                        model_adapter=self.model_adapter,
-                        enable_tracker=self._enable_tracker,
-                        project=self.project,
-                        notes=self.notes,
-                        tags=["hparam-scan", f"param:{hyperparam}", *self.tags]
-                    )
-                    runner.run()
+            hyperparameters = HyperparameterScanRunner.__flatten_paramsets(hyperparameters)
         
-        else:
-            for paramset in hyperparameters:
-                model = self.model.clone(new_params=paramset)
+        for paramset in hyperparameters:
+            model = self.model.clone(new_params=paramset)
 
-                param_tags = [f"param:{p}" for p in paramset.keys()]
-                    
-                runner = ExperimentRunner(
-                    model=model,
-                    dataset=self.__dataset,
-                    metrics=self.metrics.clone(),
-                    out_dir=self.out_dir,
-                    model_adapter=self.model_adapter,
-                    enable_tracker=self._enable_tracker,
-                    project=self.project,
-                    notes=f"Generated via HyperparameterScanRunner with {paramset}. \n{self.notes}",
-                    tags=["hparam-scan", *param_tags, *self.tags]
-                )
-                runner.run()
+            param_tags = [f"param:{p}" for p in paramset.keys()]
+                
+            runner = ExperimentRunner(
+                model=model,
+                dataset=self.__dataset,
+                metrics=self.metrics.clone(),
+                out_dir=self.out_dir,
+                model_adapter=self.model_adapter,
+                enable_tracker=self._enable_tracker,
+                project=self.project,
+                notes=f"Generated via HyperparameterScanRunner with {paramset}. \n{self.notes}",
+                tags=["hparam-scan", *param_tags, *self.tags]
+            )
+            runner.run()

@@ -3,5 +3,6 @@ from .analyzer import DatasetAnalyzer
 
 __all__ = [
     "ExperimentRunner",
-    "DatasetAnalyzer"
+    "DatasetAnalyzer",
+    "HyperparameterScanRunner"
 ]
