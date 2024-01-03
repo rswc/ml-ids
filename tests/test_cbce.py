@@ -135,7 +135,7 @@ class TestCBCE:
 
         VALUE_BASE = [10, -10]
         LABEL = ["A", "B"]
-        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(150)]
+        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(400)]
 
         for x, y in DATA:
             model.learn_one(x, y)
@@ -143,7 +143,7 @@ class TestCBCE:
         assert model.predict_proba_one({"x": 9})["A"] > 0.5, "Failed to learn first class"
 
         VALUE_BASE = [0, -10]
-        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(100)]
+        DATA = [({"x": random.uniform(-2.0, 2.0) + VALUE_BASE[i & 1]}, LABEL[i & 1]) for i in range(200)]
 
         model_before_drift = model.classifiers['A']
 
