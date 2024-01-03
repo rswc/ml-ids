@@ -15,7 +15,8 @@ class CBCE(base.Wrapper, base.Classifier):
             drift_detector: base.BinaryDriftAndWarningDetector = NoDrift(),
             decay_factor: float = 0.9,
             disappearance_threshold: float = 0.9 ** 1000,
-            seed: int = None
+            seed: int = None,
+            reset_buffer_on_warning_lowered: bool = True
         ) -> None:
         self.classifier = classifier
         self.drift_detector = drift_detector
@@ -31,6 +32,9 @@ class CBCE(base.Wrapper, base.Classifier):
         self._sample_buffer: dict[base.typing.ClfTarget, list[dict]] = {}
         self._random = random.Random(seed)
         self.seed = seed
+
+        self.__classes_to_reset = []
+        self.reset_buffer_on_warning_lowered = reset_buffer_on_warning_lowered
 
     @property
     def _wrapped_model(self):
@@ -97,6 +101,11 @@ class CBCE(base.Wrapper, base.Classifier):
 
         self.__update_cb_models(x, y, **kwargs)
 
+        for cls in self.__classes_to_reset:
+            self.__reset_model(cls)
+
+        self.__classes_to_reset.clear()
+
         return self
     
     def __update_cb_models(self, x: dict, y: base.typing.ClfTarget, **kwargs):
@@ -118,9 +127,11 @@ class CBCE(base.Wrapper, base.Classifier):
         pred = self.predict_one(x)
         self.drift_detectors[y].update(pred != y)
 
-        #TODO: if the warning disappears, we should probably clear and stop the buffer
         if self.drift_detectors[y].warning_detected and y not in self._sample_buffer:
             self._sample_buffer[y] = [x]
+
+        elif y in self._sample_buffer and not self.drift_detectors[y].warning_detected and self.reset_buffer_on_warning_lowered:
+            del self._sample_buffer[y]
 
         if self.drift_detectors[y].drift_detected:
             if y in self._sample_buffer:
@@ -137,7 +148,7 @@ class CBCE(base.Wrapper, base.Classifier):
                 del self._sample_buffer[y]
             
             else:
-                self.__reset_model(y)
+                self.__classes_to_reset.append(y)
 
     def __reset_model(self, y: base.typing.ClfTarget):
         self.classifiers.pop(y, None)
