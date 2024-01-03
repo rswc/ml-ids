@@ -44,13 +44,21 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
 
     def __init__(self, drift_adapter: Type[ModelAdapterBase] = None) -> None:
         super().__init__()
+
+        if drift_adapter is None:
+            print("WARNING: Drift-detecting model's adapter initialized without specifying drift_adapter. The drift detector's state will not be logged.")
+
+        if not isinstance(drift_adapter, type):
+            print("WARNING: The drift detector adapter is expected to be a type, not an instance.")
+            drift_adapter = drift_adapter.__class__
+
         self._drift_adapter = drift_adapter
         self._drift_adapters: dict[str, ModelAdapterBase] = dict()
     
     def get_parameters(self) -> dict:
         return {
             **super().get_parameters(),
-            "drift_adapter_name": self._drift_adapter.__name__
+            "drift_adapter_name": self._drift_adapter.__name__ if self._drift_adapter is not None else None
         }
 
     @abc.abstractmethod
