@@ -266,7 +266,10 @@ class HyperparameterScanRunner(BaseRunner):
             model = self.model.clone(new_params=paramset)
 
             param_tags = [f"param:{p}" for p in paramset.keys()]
-                
+            user_tags = self.tags or []
+
+            user_notes = f"\n{self.notes}" if self.notes is not None else ""
+
             runner = ExperimentRunner(
                 model=model,
                 dataset=self.__dataset,
@@ -275,7 +278,7 @@ class HyperparameterScanRunner(BaseRunner):
                 model_adapter=self.model_adapter,
                 enable_tracker=self._enable_tracker,
                 project=self.project,
-                notes=f"Generated via HyperparameterScanRunner with {paramset}. \n{self.notes}",
-                tags=["hparam-scan", *param_tags, *self.tags]
+                notes=f"Generated via HyperparameterScanRunner with {paramset}.{user_notes}",
+                tags=["hparam-scan", *param_tags, *user_tags]
             )
             runner.run()
