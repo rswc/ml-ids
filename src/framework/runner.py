@@ -36,7 +36,7 @@ class BaseRunner:
         self.entity = entity
         self.project = project
         self.notes = notes
-        self.tags = tags
+        self.tags = tags or []
 
         self.model_adapter = model_adapter
 
@@ -251,7 +251,6 @@ class HyperparameterScanRunner(BaseRunner):
         model = self.model.clone(new_params=paramset)
 
         param_tags = [f"param:{p}" for p in paramset.keys()]
-        user_tags = self.tags or []
 
         user_notes = f"\n{self.notes}" if self.notes is not None else ""
 
@@ -267,7 +266,7 @@ class HyperparameterScanRunner(BaseRunner):
             enable_tracker=self._enable_tracker,
             project=self.project,
             notes=f"Generated via HyperparameterScanRunner with {paramset}.{user_notes}",
-            tags=["hparam-scan", *param_tags, *user_tags]
+            tags=["hparam-scan", *param_tags, *self.tags]
         )
         runner.run()
 
