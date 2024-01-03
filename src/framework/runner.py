@@ -1,7 +1,9 @@
+from copy import deepcopy
 import os
 from datetime import datetime
 import csv
 import json
+from typing import Any, Iterable
 from river.base import Classifier
 from river.datasets.base import Dataset, MULTI_CLF
 from river.metrics.base import Metrics, BinaryMetric
@@ -132,7 +134,6 @@ class ExperimentRunner:
         print("Experiment DONE")
         wandb.finish()
 
-
     def _metrics_match_dataset(self) -> bool:
         """Check if there exist binary-only metric for multiclass dataset"""
         if self.dataset.task != MULTI_CLF:
@@ -173,3 +174,134 @@ class ExperimentRunner:
             f"model:{self.model.__class__.__name__}",
             f"data:{self.dataset.__class__.__name__}"
         ]
+
+class HyperparameterScanRunner:
+    """Helper class for generating & running multiple `ExperimentRunner` instances, to test
+    influence of given hyperparameters on the given model's behavior.
+
+    Parameters
+    ----------
+    model
+        The river-compatible classifier to be tested.
+    dataset
+        The river-compatible dataset class for this experiment.
+    metrics
+        A `river.metrics.base.Metrics` object containing a group of metrics to be collected.
+    out_dir
+        The directory to which `.csv` logs will be saved.
+    name
+        (optional) A custom name for this experiment.
+    model_adapter
+        (optional) An adapter class for collecting aditional data from the model
+    enable_tracker
+        (default: `True`) Whether or not to use the tracker (currently, wandb) to log data
+        from this experiment online.
+    project
+        (wandb only, optional) The name of the project under which this exepriment should be categorized.
+    entity
+        (wandb only, optional) The entity (user or team) which owns this experiment.
+    notes
+        (wandb only, optional) Freeform notes about this experiment.
+    tags
+        (wandb only, optional) Tags which will be shown on this experiment.
+
+    """
+
+    def __init__(
+            self,
+            model: Classifier,
+            dataset: Dataset,
+            metrics: Metrics,
+            out_dir: str,
+            model_adapter: ModelAdapterBase = None,
+            enable_tracker: bool = True,
+            project: str = None,
+            entity: str = None,
+            notes: str = None,
+            tags: list[str] = None
+        ) -> None:
+        self.model = model
+        self.dataset = dataset
+        self.metrics = metrics
+        self.out_dir = out_dir
+        self.entity = entity
+        self.project = project
+        self.notes = notes
+        self.tags = tags
+
+        self.model_adapter = model_adapter
+
+        self._enable_tracker = enable_tracker
+
+        assert metrics.works_with(model), "Invalid metrics for model"
+        assert self._metrics_match_dataset(), "Invalid use of binary metric for multiclass dataset"
+        assert os.path.isdir(out_dir), f"{out_dir} is not a directory"
+
+    def _metrics_match_dataset(self) -> bool:
+        """Check if there exist binary-only metric for multiclass dataset"""
+        if self.dataset.task != MULTI_CLF:
+            return True
+        
+        for m in self.metrics:
+            if isinstance(m, BinaryMetric): 
+                return False
+            elif isinstance(m, MetricWrapper):
+                if not m.works_with_multiclass:
+                    return False
+        return True
+    
+    @property
+    def __dataset(self):
+        return deepcopy(self.dataset)
+    
+    def run(self, hyperparameters: dict[str, list] | Iterable[dict[str, list]]) -> None:
+        """Start the hyperparameter scan.
+        
+        Parameters
+        ----------
+        hyperparameters
+            If dict mapping hyperparameter names to lists of values: will generate separate series
+            of test runs for each hyperparameter, with each instance having that parameter set
+            to one of the listed values, leaving all others as defined on the provided `model`.
+            If list of dicts, will generate a test run for each dict, overriding
+            the provided `model`'s parameters with those specified by each of the dicts.
+
+        """
+
+        if isinstance(hyperparameters, dict):
+            for hyperparam, values in hyperparameters.items():
+                for value in values:
+                    model = self.model.clone(new_params={hyperparam: value})
+                    
+                    runner = ExperimentRunner(
+                        model=model,
+                        dataset=self.__dataset,
+                        metrics=self.metrics.clone(),
+                        out_dir=self.out_dir,
+                        name=f"{hyperparam}={value}",
+                        model_adapter=self.model_adapter,
+                        enable_tracker=self._enable_tracker,
+                        project=self.project,
+                        notes=self.notes,
+                        tags=["hparam-scan", f"param:{hyperparam}", *self.tags]
+                    )
+                    runner.run()
+        
+        else:
+            for paramset in hyperparameters:
+                model = self.model.clone(new_params=paramset)
+
+                param_tags = [f"param:{p}" for p in paramset.keys()]
+                    
+                runner = ExperimentRunner(
+                    model=model,
+                    dataset=self.__dataset,
+                    metrics=self.metrics.clone(),
+                    out_dir=self.out_dir,
+                    model_adapter=self.model_adapter,
+                    enable_tracker=self._enable_tracker,
+                    project=self.project,
+                    notes=f"Generated via HyperparameterScanRunner with {paramset}. \n{self.notes}",
+                    tags=["hparam-scan", *param_tags, *self.tags]
+                )
+                runner.run()
