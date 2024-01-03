@@ -10,7 +10,8 @@ setup(
         'tqdm==4.66.1',
         'river==0.20.1',
         'pytest==7.4.3',
-        'wandb==0.16.0'
+        'wandb==0.16.0',
+        'pathos==0.3.1'
     ],
     setup_requires=[
         'pytest-runner',

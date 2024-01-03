@@ -1,4 +1,6 @@
+import base64
 from copy import deepcopy
+from pathos.multiprocessing import Pool
 import os
 from datetime import datetime
 import csv
@@ -244,8 +246,32 @@ class HyperparameterScanRunner(BaseRunner):
         #TODO: different flattening strategies, e.g. cartesian product?
 
         return [{hyperparam: val} for hyperparam, vals in paramsets.items() for val in vals]
-    
-    def run(self, hyperparameters: dict[str, list] | Iterable[dict[str, list]]) -> None:
+
+    def _run_instance(self, paramset: dict):
+        model = self.model.clone(new_params=paramset)
+
+        param_tags = [f"param:{p}" for p in paramset.keys()]
+        user_tags = self.tags or []
+
+        user_notes = f"\n{self.notes}" if self.notes is not None else ""
+
+        name = base64.urlsafe_b64encode(str(paramset).encode())
+
+        runner = ExperimentRunner(
+            model=model,
+            dataset=self.__dataset,
+            metrics=self.metrics.clone(),
+            out_dir=self.out_dir,
+            name=name,
+            model_adapter=self.model_adapter,
+            enable_tracker=self._enable_tracker,
+            project=self.project,
+            notes=f"Generated via HyperparameterScanRunner with {paramset}.{user_notes}",
+            tags=["hparam-scan", *param_tags, *user_tags]
+        )
+        runner.run()
+
+    def run(self, hyperparameters: dict[str, list] | Iterable[dict[str, list]], parallel_workers: int = 1) -> None:
         """Start the hyperparameter scan.
         
         Parameters
@@ -256,29 +282,19 @@ class HyperparameterScanRunner(BaseRunner):
             to one of the listed values, leaving all others as defined on the provided `model`.
             If list of dicts, will generate a test run for each dict, overriding
             the provided `model`'s parameters with those specified by each of the dicts.
+        parallel_workers
+            (default: 1) If equal to 2 or greater, experiment instances will be run using
+            a `multiprocessing` `Pool` of this many processes.
 
         """
 
         if isinstance(hyperparameters, dict):
             hyperparameters = HyperparameterScanRunner.__flatten_paramsets(hyperparameters)
         
-        for paramset in hyperparameters:
-            model = self.model.clone(new_params=paramset)
+        if parallel_workers >= 2:
+            with Pool(parallel_workers) as p:
+                p.map(self._run_instance, hyperparameters)
 
-            param_tags = [f"param:{p}" for p in paramset.keys()]
-            user_tags = self.tags or []
-
-            user_notes = f"\n{self.notes}" if self.notes is not None else ""
-
-            runner = ExperimentRunner(
-                model=model,
-                dataset=self.__dataset,
-                metrics=self.metrics.clone(),
-                out_dir=self.out_dir,
-                model_adapter=self.model_adapter,
-                enable_tracker=self._enable_tracker,
-                project=self.project,
-                notes=f"Generated via HyperparameterScanRunner with {paramset}.{user_notes}",
-                tags=["hparam-scan", *param_tags, *user_tags]
-            )
-            runner.run()
+        else:
+            for paramset in hyperparameters:
+                self._run_instance(paramset)
