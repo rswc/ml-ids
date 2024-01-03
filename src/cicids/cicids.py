@@ -31,7 +31,7 @@ class CICIDS2017(base.FileDataset):
     class Features:
         """Helper class containing definitions of feature subsets. For passing to dataset via `used_features` param.
         The features are ranked in non-increasing order of importance, so feel free to use Python slicing to select top-N.
-        
+
         """
 
         YULIANTO2019 = [

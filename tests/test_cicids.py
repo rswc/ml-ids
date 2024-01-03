@@ -202,3 +202,9 @@ class TestCICIDSDataset:
             assert len(classes) == dataset.n_classes == 27
         else:
             pass
+    
+    def test_feature_subsets(self):
+        for attr, features in vars(CICIDS2017.Features).items():
+            if not attr.startswith('_'):
+                for feature in features:
+                    assert feature in CICIDS2017.features, f"CICIDS2017.Features.{attr} includes '{feature}', which does not exist."
