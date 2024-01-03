@@ -28,6 +28,102 @@ class CICIDS2017(base.FileDataset):
     DEFAULT_NOATT_FILENAME = "all_days_noatt.csv"
     LABEL_COLUMN_NAME = "Label"
 
+    class Features:
+        """Helper class containing definitions of feature subsets. For passing to dataset via `used_features` param.
+        The features are ranked in non-increasing order of importance, so feel free to use Python slicing to select top-N.
+        
+        """
+
+        YULIANTO2019 = [
+            "Total Length of Bwd Packet",
+            "Fwd Packet Length Min",
+            "Bwd Packet Length Min",
+            "Bwd Packet Length Std",
+            "Flow IAT Mean",
+            "Flow IAT Min",
+            "Fwd IAT Min",
+            "Bwd IAT Total",
+            "Bwd IAT Mean",
+            "Bwd IAT Std",
+            "Bwd IAT Min",
+            "Fwd Packets/s",
+            "Bwd Packets/s",
+            "Packet Length Min",
+            "Packet Length Variance",
+            "PSH Flag Count",
+            "ACK Flag Count",
+            "Down/Up Ratio",
+            "Average Packet Size",
+            "Fwd Segment Size Avg",
+            "Subflow Fwd Bytes",
+            "Fwd Init Win Bytes",
+            "Bwd Init Win Bytes",
+            "Active Mean",
+            "Idle Mean",
+            "Label",
+        ]
+        """Set of 25 features, as proposed by:
+        
+        Arif Yulianto et al 2019 J. Phys.: Conf. Ser. 1192 012018,
+        "Improving AdaBoost-based Intrusion Detection System (IDS) Performance on CIC IDS 2017 Dataset",
+        doi: 10.1088/1742-6596/1192/1/012018
+        """
+
+        KURNIABUDI2020 = [
+            "Packet Length Std",
+            "Total Length of Bwd Packet",
+            "Subflow Bwd Bytes",
+            "Dst Port",
+            "Packet Length Variance",
+            "Bwd Packet Length Mean",
+            "Bwd Segment Size Avg",
+            "Bwd Packet Length Max",
+            "Bwd Init Win Bytes",
+            "Total Length of Fwd Packet",
+            "Subflow Fwd Bytes",
+            "Fwd Init Win Bytes",
+            "Average Packet Size",
+            "Packet Length Mean",
+            "Packet Length Max",
+            "Fwd Packet Length Max",
+            "Flow IAT Max",
+            "Bwd Header Length",
+            "Flow Duration",
+            "Fwd IAT Max",
+            "Fwd Header Length",
+            "Fwd IAT Total",
+            "Fwd IAT Mean",
+            "Flow IAT Mean",
+            "Flow Bytes/s",
+            "Bwd Packet Length Std",
+            "Subflow Bwd Packets",
+            "Total Bwd packets",
+            "Fwd Packet Length Mean",
+            "Fwd Segment Size Avg",
+            "Label",
+        ]
+        """Set of top 30 features according to the ranking proposed by:
+        
+        Kurniabudi, D. Stiawan, Darmawijoyo, M. Y. Bin Idris, A. M. Bamhdi and R. Budiarto,
+        "CICIDS-2017 Dataset Feature Analysis With Information Gain for Anomaly Detection,"
+        in IEEE Access, vol. 8, pp. 132911-132921, 2020, doi: 10.1109/ACCESS.2020.3009843
+        """
+
+        #TODO: Add docstring w/ source!
+        DEFAULT = [
+            "Flow Duration",
+            "Flow Packets/s",
+            "Flow IAT Mean",
+            "Flow IAT Max",
+            "Flow IAT Min",
+            "Fwd Packets/s",
+            "ACK Flag Count",
+            "Subflow Bwd Bytes",
+            "Fwd Init Win Bytes",
+            "Bwd Init Win Bytes",
+            "Label",
+        ]
+
     features = [
         "id",
         "Flow ID",
@@ -103,7 +199,7 @@ class CICIDS2017(base.FileDataset):
         "Subflow Fwd Bytes",
         "Subflow Bwd Packets",
         "Subflow Bwd Bytes",
-        "FWD Init Win Bytes",
+        "Fwd Init Win Bytes",
         "Bwd Init Win Bytes",
         "Fwd Act Data Pkts",
         "Fwd Seg Size Min",
@@ -231,7 +327,7 @@ class CICIDS2017(base.FileDataset):
             "Subflow Fwd Bytes": int,
             "Subflow Bwd Packets": int,
             "Subflow Bwd Bytes": int,
-            "FWD Init Win Bytes": int,
+            "Fwd Init Win Bytes": int,
             "Bwd Init Win Bytes": int,
             "Fwd Act Data Pkts": int,
             "Fwd Seg Size Min": int,
@@ -269,19 +365,7 @@ class CICIDS2017(base.FileDataset):
             if self.LABEL_COLUMN_NAME not in self.used_features:
                 self.used_features.append(self.LABEL_COLUMN_NAME)
         else:
-            self.used_features = [
-                "Flow Duration",
-                "Flow Packets/s",
-                "Flow IAT Mean",
-                "Flow IAT Max",
-                "Flow IAT Min",
-                "Fwd Packets/s",
-                "ACK Flag Count",
-                "Subflow Bwd Bytes",
-                "FWD Init Win Bytes",
-                "Bwd Init Win Bytes",
-                "Label",
-            ]
+            self.used_features = CICIDS2017.Features.DEFAULT
 
         directory = (dataset_dir or self.default_dataset_dir()).resolve()
         if not directory.is_dir():
