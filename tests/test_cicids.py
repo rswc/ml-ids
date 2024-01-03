@@ -7,7 +7,7 @@ from cicids.preprocess import (
 import csv
 import pytest
 
-CICIDS_TEST = False
+SKIP_CICIDS_TEST = True
 
 
 class TestCICIDSPreprocess:
@@ -154,51 +154,49 @@ class TestCICIDSPreprocess:
 
 
 class TestCICIDSDataset:
+    @pytest.mark.skipif(SKIP_CICIDS_TEST, reason="Size of dataset and rarity of code changes means it's impractical to test this often")
     def test_number_of_samples(self):
-        if CICIDS_TEST:
-            dataset = CICIDS2017()
-            samples = 0
+        dataset = CICIDS2017()
+        samples = 0
 
-            for x, y in iter(dataset):
-                samples += 1
+        for x, y in iter(dataset):
+            samples += 1
 
-            assert samples == dataset.n_samples
-        else:
-            pass
+        assert samples == dataset.n_samples
 
+    @pytest.mark.skipif(SKIP_CICIDS_TEST, reason="Size of dataset and rarity of code changes means it's impractical to test this often")
     def test_number_of_features(self):
-        if CICIDS_TEST:
-            dataset = CICIDS2017()
-            x, y = next(iter(dataset))
+        dataset = CICIDS2017()
+        x, y = next(iter(dataset))
 
-            assert len(x) == dataset.n_features
-        else:
-            pass
+        assert len(x) == dataset.n_features
 
+    @pytest.mark.skipif(SKIP_CICIDS_TEST, reason="Size of dataset and rarity of code changes means it's impractical to test this often")
     def test_number_of_classes_converted(self):
-        if CICIDS_TEST:
-            dataset = CICIDS2017(convert_attempted=True)
-            assert dataset.filename == "all_days_noatt.csv"
-            classes = []
+        dataset = CICIDS2017(convert_attempted=True)
+        assert dataset.filename == "all_days_noatt.csv"
+        classes = []
 
-            for x, y in iter(dataset):
-                if y not in classes:
-                    classes.append(y)
+        for x, y in iter(dataset):
+            if y not in classes:
+                classes.append(y)
 
-            assert len(classes) == dataset.n_classes == 16
-        else:
-            pass
+        assert len(classes) == dataset.n_classes == 16
 
+    @pytest.mark.skipif(SKIP_CICIDS_TEST, reason="Size of dataset and rarity of code changes means it's impractical to test this often")
     def test_number_of_classes_converted(self):
-        if CICIDS_TEST:
-            dataset = CICIDS2017(convert_attempted=False)
-            assert dataset.filename == "all_days.csv"
-            classes = []
+        dataset = CICIDS2017(convert_attempted=False)
+        assert dataset.filename == "all_days.csv"
+        classes = []
 
-            for x, y in iter(dataset):
-                if y not in classes:
-                    classes.append(y)
+        for x, y in iter(dataset):
+            if y not in classes:
+                classes.append(y)
 
-            assert len(classes) == dataset.n_classes == 27
-        else:
-            pass
+        assert len(classes) == dataset.n_classes == 27
+    
+    def test_feature_subsets(self):
+        for attr, features in vars(CICIDS2017.Features).items():
+            if not attr.startswith('_'):
+                for feature in features:
+                    assert feature in CICIDS2017.features, f"CICIDS2017.Features.{attr} includes '{feature}', which does not exist."
