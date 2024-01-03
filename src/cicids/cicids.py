@@ -56,7 +56,7 @@ class CICIDS2017(base.FileDataset):
             "Average Packet Size",
             "Fwd Segment Size Avg",
             "Subflow Fwd Bytes",
-            "Fwd Init Win Bytes",
+            "FWD Init Win Bytes",
             "Bwd Init Win Bytes",
             "Active Mean",
             "Idle Mean",
@@ -81,7 +81,7 @@ class CICIDS2017(base.FileDataset):
             "Bwd Init Win Bytes",
             "Total Length of Fwd Packet",
             "Subflow Fwd Bytes",
-            "Fwd Init Win Bytes",
+            "FWD Init Win Bytes",
             "Average Packet Size",
             "Packet Length Mean",
             "Packet Length Max",
@@ -118,7 +118,7 @@ class CICIDS2017(base.FileDataset):
             "Fwd Packets/s",
             "ACK Flag Count",
             "Subflow Bwd Bytes",
-            "Fwd Init Win Bytes",
+            "FWD Init Win Bytes",
             "Bwd Init Win Bytes",
             "Label",
         ]
@@ -129,7 +129,6 @@ class CICIDS2017(base.FileDataset):
         predictive models in the statistical computing language R." 
         Science, 2020, 5.2: 187-191.
         """
-        
 
     features = [
         "id",
@@ -206,7 +205,7 @@ class CICIDS2017(base.FileDataset):
         "Subflow Fwd Bytes",
         "Subflow Bwd Packets",
         "Subflow Bwd Bytes",
-        "Fwd Init Win Bytes",
+        "FWD Init Win Bytes",
         "Bwd Init Win Bytes",
         "Fwd Act Data Pkts",
         "Fwd Seg Size Min",
@@ -334,7 +333,7 @@ class CICIDS2017(base.FileDataset):
             "Subflow Fwd Bytes": int,
             "Subflow Bwd Packets": int,
             "Subflow Bwd Bytes": int,
-            "Fwd Init Win Bytes": int,
+            "FWD Init Win Bytes": int,
             "Bwd Init Win Bytes": int,
             "Fwd Act Data Pkts": int,
             "Fwd Seg Size Min": int,
