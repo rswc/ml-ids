@@ -109,7 +109,6 @@ class CICIDS2017(base.FileDataset):
         in IEEE Access, vol. 8, pp. 132911-132921, 2020, doi: 10.1109/ACCESS.2020.3009843
         """
 
-        #TODO: Add docstring w/ source!
         DEFAULT = [
             "Flow Duration",
             "Flow Packets/s",
@@ -123,6 +122,14 @@ class CICIDS2017(base.FileDataset):
             "Bwd Init Win Bytes",
             "Label",
         ]
+        """Set of top 10 features according to the ranking proposed by:
+
+        PELLETIER, Zachariah; ABUALKIBASH, Munther. 
+        "Evaluating the CIC IDS-2017 dataset using machine learning methods and creating multiple 
+        predictive models in the statistical computing language R." 
+        Science, 2020, 5.2: 187-191.
+        """
+        
 
     features = [
         "id",
