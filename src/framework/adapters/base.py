@@ -42,7 +42,7 @@ class ModelAdapterBase(abc.ABC, Generic[MODEL]):
 class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
     """Helper extension to support integrating adapters for model's inner drift detector."""
 
-    def __init__(self, drift_adapter: Type[ModelAdapterBase] = None) -> None:
+    def __init__(self, drift_adapter: Type[ModelAdapterBase] = None, warning_adapter: Type[ModelAdapterBase] = None) -> None:
         super().__init__()
 
         if drift_adapter is None:
@@ -52,8 +52,22 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
             print("WARNING: The drift detector adapter is expected to be a type, not an instance.")
             drift_adapter = drift_adapter.__class__
 
+        if not isinstance(warning_adapter, type):
+            print("WARNING: The drift detector warning adapter is expected to be a type, not an instance.")
+            warning_adapter = warning_adapter.__class__
+
         self._drift_adapter = drift_adapter
         self._drift_adapters: dict[str, ModelAdapterBase] = dict()
+
+        if warning_adapter is not None and self._get_drift_warning_detectors() is not None:
+            print("WARNING: warning_adapter parameter passed to adapter of model which does not separate drift and warning instances. Warning adapter will be ignored.")
+            warning_adapter = None
+        
+        elif warning_adapter is None and self._get_drift_warning_detectors() is not None:
+            warning_adapter = drift_adapter
+
+        self._warning_adapter = warning_adapter
+        self._warning_adapters: dict[str, ModelAdapterBase] = dict()
     
     def get_parameters(self) -> dict:
         return {
@@ -68,6 +82,18 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
     @abc.abstractmethod
     def _get_drift_detectors(self) -> dict[str, DriftDetector]:
         """Access the model's drift detector list."""
+
+    def _get_drift_warning_prototype(self, model: MODEL) -> DriftDetector:
+        """Access the model's "prototype" drift warning detector. This is useful for models which use separate
+        detector instances for warning (as opposed to a single DriftAndWarning instance)."""
+
+        return None
+
+    def _get_drift_warning_detectors(self) -> dict[str, DriftDetector]:
+        """Access the model's drift warning detector list. This is useful for models which use separate
+        detector instances for warning (as opposed to a single DriftAndWarning instance)."""
+
+        return None
 
     def add_drift_state(self, state: dict, active_classes: list[str] = None):
         if self._drift_adapter is not None:
@@ -86,6 +112,22 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
                 if stats is not None and (active_classes is None or cls in active_classes)
             }
         
+        if self._warning_adapter is not None:
+            for cls in self._get_drift_warning_detectors().keys():
+                if cls not in self._warning_adapters:
+                    self._warning_adapters[cls] = self._warning_adapter()
+                
+                self._warning_adapters[cls].model = self._get_drift_warning_detectors()[cls]
+
+            drift = {cls: self._warning_adapters[cls].get_loggable_state() for cls in self._warning_adapters}
+
+            # Log state for active classes only
+            state[f"drift_warning.{self._get_drift_warning_prototype(self._model).__class__.__name__}"] = {
+                cls: stats
+                for cls, stats in drift.items()
+                if stats is not None and (active_classes is None or cls in active_classes)
+            }
+
         return state
 
     @ModelAdapterBase.model.setter
