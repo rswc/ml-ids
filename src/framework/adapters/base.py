@@ -94,39 +94,39 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         detector instances for warning (as opposed to a single DriftAndWarning instance)."""
 
         return None
+    
+    def __extract_state(self, proto: Type[ModelAdapterBase], detectors: dict[str, DriftDetector], adapters: dict[str, ModelAdapterBase], active_classes: list[str] = None):
+        for cls in detectors.keys():
+            if cls not in adapters:
+                adapters[cls] = proto()
+            
+            adapters[cls].model = detectors[cls]
+
+        drift = {cls: adapters[cls].get_loggable_state() for cls in adapters}
+
+        # Log state for active classes only
+        return {
+            cls: stats
+            for cls, stats in drift.items()
+            if stats is not None and (active_classes is None or cls in active_classes)
+        }
 
     def add_drift_state(self, state: dict, active_classes: list[str] = None):
         if self._drift_adapter is not None:
-            for cls in self._get_drift_detectors().keys():
-                if cls not in self._drift_adapters:
-                    self._drift_adapters[cls] = self._drift_adapter()
-                
-                self._drift_adapters[cls].model = self._get_drift_detectors()[cls]
-
-            drift = {cls: self._drift_adapters[cls].get_loggable_state() for cls in self._drift_adapters}
-
-            # Log state for active classes only
-            state[f"drift.{self._get_drift_prototype(self._model).__class__.__name__}"] = {
-                cls: stats
-                for cls, stats in drift.items()
-                if stats is not None and (active_classes is None or cls in active_classes)
-            }
+            state[f"drift.{self._get_drift_prototype(self._model).__class__.__name__}"] = self.__extract_state(
+                self._drift_adapter,
+                self._get_drift_detectors(),
+                self._drift_adapters,
+                active_classes
+            )
         
         if self._warning_adapter is not None:
-            for cls in self._get_drift_warning_detectors().keys():
-                if cls not in self._warning_adapters:
-                    self._warning_adapters[cls] = self._warning_adapter()
-                
-                self._warning_adapters[cls].model = self._get_drift_warning_detectors()[cls]
-
-            drift = {cls: self._warning_adapters[cls].get_loggable_state() for cls in self._warning_adapters}
-
-            # Log state for active classes only
-            state[f"drift_warning.{self._get_drift_warning_prototype(self._model).__class__.__name__}"] = {
-                cls: stats
-                for cls, stats in drift.items()
-                if stats is not None and (active_classes is None or cls in active_classes)
-            }
+            state[f"drift_warning.{self._get_drift_warning_prototype(self._model).__class__.__name__}"] = self.__extract_state(
+                self._warning_adapter,
+                self._get_drift_warning_detectors(),
+                self._warning_adapters,
+                active_classes
+            )
 
         return state
 
