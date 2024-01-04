@@ -135,4 +135,7 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         if self._drift_adapter is not None and not isinstance(self._get_drift_prototype(model), self._drift_adapter.get_target_class()):
             raise ValueError(f"Model with {self._get_drift_prototype(model).__class__.__name__} as drift detector was provided to an adapter expecting {self._drift_adapter.__name__}")
 
+        if self._warning_adapter is not None and not isinstance(self._get_drift_warning_prototype(model), self._warning_adapter.get_target_class()):
+            raise ValueError(f"Model with {self._get_drift_warning_prototype(model).__class__.__name__} as drift warning detector was provided to an adapter expecting {self._warning_adapter.__name__}")
+
         super(__class__, self.__class__).model.__set__(self, model)
