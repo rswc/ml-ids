@@ -4,6 +4,28 @@ from synthstream import (
     ClassSampler, EndOfClassError
 )
 
+TEST_SS_REP_BANNER = """SyntheticStream
+
+This dataset simulates synthetic online stream with weighted sampling based on `ClassSamplers` mechanism.
+
+               Name  SyntheticStream
+               Task  Multi-class classification
+            Samples  inf 
+            Classes  2
+ActiveClassSamplers  1
+FutureClassSamplers  1
+
+Parameters
+----------
+    n_features
+        Number of features in original dataset
+    max_samples
+        Number of examples after which datastream will stop sampling
+    seed
+        Seed to initialize the random module for selecting samplers based on their weight
+    init_csamplers
+        List of `ClassSampler` instances that make this stream"""
+
 class TestSyntheticStream:
     
     def test_loop_sampler_with_late_start(self): 
@@ -20,7 +42,7 @@ class TestSyntheticStream:
             stream_t_start=2, max_samples=500, eoc_strategy='loop'
         )
 
-        ss = SyntheticStream(max_samples=None, seed=42, init_csamplers=[cs1, cs2])
+        ss = SyntheticStream(n_features=2, max_samples=None, seed=42, init_csamplers=[cs1, cs2])
 
         assert next(ss) == (ex1[0], 'A') 
         assert next(ss) == (ex1[1], 'A')
@@ -34,7 +56,7 @@ class TestSyntheticStream:
             stream_t_start=0, max_samples=10, eoc_strategy='loop'
         )
         
-        ss = SyntheticStream(max_samples=2, seed=42, init_csamplers=[none_sampler])
+        ss = SyntheticStream(n_features=0, max_samples=2, seed=42, init_csamplers=[none_sampler])
 
         assert next(ss)[0] is None
         assert next(ss)[0] is None
@@ -48,7 +70,7 @@ class TestSyntheticStream:
             max_samples=20, eoc_strategy='loop'
         )
         
-        ss = SyntheticStream(max_samples=10, init_csamplers=[none_sampler])
+        ss = SyntheticStream(n_features=0, max_samples=10, init_csamplers=[none_sampler])
         
         assert next(ss) == (None, 'None')
         # 9 samples left in the stream
@@ -64,8 +86,7 @@ class TestSyntheticStream:
             max_samples=10, eoc_strategy='loop'
         )
         
-        ss = SyntheticStream(max_samples=20)
-        ss.add_sampler(none_sampler)
+        ss = SyntheticStream(n_features=0, max_samples=20, init_csamplers=[none_sampler])
         
         for i in range(10):
             next(ss) == (None, 'None')
@@ -79,7 +100,7 @@ class TestSyntheticStream:
             label = 'TEST', samples=[1] * 3, weight_func=lambda t: 1,
             max_samples=5, eoc_strategy='raise'
         )
-        ss = SyntheticStream(max_samples=5, seed=42, init_csamplers=[sampler_raise])
+        ss = SyntheticStream(n_features=1, max_samples=5, seed=42, init_csamplers=[sampler_raise])
         assert next(ss) == (1, 'TEST')
         assert next(ss) == (1, 'TEST')
         assert next(ss) == (1, 'TEST')
@@ -97,7 +118,7 @@ class TestSyntheticStream:
             stream_t_start=1, max_samples=1
         )
         
-        ss = SyntheticStream(seed=42, init_csamplers=[sampler_a, sampler_b])
+        ss = SyntheticStream(n_features=1, seed=42, init_csamplers=[sampler_a, sampler_b])
         assert ss.class_probabilities is None
         assert next(ss) == (1, 'A')
         assert ss.class_probabilities['A'] == pytest.approx(1.0)
@@ -115,7 +136,7 @@ class TestSyntheticStream:
             label= 'A', samples=[2, 2], weight_func=lambda t: 1,
             stream_t_start=2, max_samples=2
         )
-        ss = SyntheticStream(max_samples=4, seed=42, init_csamplers=[sampler_a, sampler_a2])
+        ss = SyntheticStream(n_features=1, max_samples=4, seed=42, init_csamplers=[sampler_a, sampler_a2])
         
         assert next(ss) == (1, 'A')
         assert next(ss) == (1, 'A')
@@ -127,11 +148,31 @@ class TestSyntheticStream:
             label= 'ZeroProb', samples=[1], weight_func=lambda t: 0,
             max_samples=1
         )
-        ss = SyntheticStream(max_samples=1, seed=42)
-        ss.add_sampler(sampler_a)
+        ss = SyntheticStream(n_features=1, max_samples=1, seed=42, init_csamplers=[sampler_a])
         
         with pytest.raises(ValueError):
             next(ss)
+
+    def test_river_dataset_api(self):
+        ex1 = [ (1,1), (1,2) ]
+        ex2 = [ (2,1), (2,2) ]
+        
+        cs1 = ClassSampler(
+            label='A', samples=ex1, weight_func=lambda t: 1, 
+            stream_t_start=0, max_samples=2, eoc_strategy='raise'
+        )
+        
+        cs2 = ClassSampler(
+            label='B', samples=ex2, weight_func=lambda t: 2, 
+            stream_t_start=2, max_samples=500, eoc_strategy='loop'
+        )
+
+        ss = SyntheticStream(n_features=2, max_samples=None, seed=42, init_csamplers=[cs1, cs2])
+        
+        assert ss.sparse is False
+        assert str(ss).replace(' ', '') == TEST_SS_REP_BANNER.replace(' ', '')
+
+
 
 
 
