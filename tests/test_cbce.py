@@ -9,7 +9,7 @@ class TestCBCE:
         """
         Model based on Logistic Regression should be able to learn a basic binary problem.
         """
-        model = CBCE(linear_model.LogisticRegression())
+        model = CBCE(linear_model.LogisticRegression(), seed=42)
         
         DATA = [
             ({"x": 1}, "pos"),
@@ -31,7 +31,7 @@ class TestCBCE:
         Receiving the first sample of a novel class should have no impact on the predictions.
         """
 
-        model = CBCE(linear_model.LogisticRegression())
+        model = CBCE(linear_model.LogisticRegression(), seed=42)
 
         DATA = [
             ({"x": 1}, "majority"),
@@ -59,7 +59,7 @@ class TestCBCE:
         once new samples belonging to them arrive.
         """
 
-        model = CBCE(linear_model.LogisticRegression(), disappearance_threshold=0.9**100)
+        model = CBCE(linear_model.LogisticRegression(), disappearance_threshold=0.9**100, seed=42)
 
         DATA = [
             ({"x": 1}, "A"),
@@ -101,7 +101,7 @@ class TestCBCE:
         """
         random.seed(42)
 
-        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM())
+        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM(), seed=42)
 
         VALUE_BASE = [2, -2]
         LABEL = ["A", "B"]
@@ -131,7 +131,7 @@ class TestCBCE:
         """
         random.seed(42)
 
-        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM())
+        model = CBCE(linear_model.LogisticRegression(), drift_detector=DDM(), seed=42)
 
         VALUE_BASE = [10, -10]
         LABEL = ["A", "B"]
