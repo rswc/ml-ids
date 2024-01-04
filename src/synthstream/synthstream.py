@@ -1,6 +1,7 @@
 from random import Random
 from .csampler import ClassSampler
-from river.datasets.base import MULTI_CLF
+from river.datasets.base import MULTI_CLF, Dataset
+import re
 
 class NoActiveSamplersError(Exception):
     pass
@@ -8,12 +9,29 @@ class NoActiveSamplersError(Exception):
 class ActiveLabelDuplicateError(Exception):
     pass
 
-class SyntheticStream:
-    def __init__(self, max_samples: int = None, seed: int = None, init_csamplers: list[ClassSampler] = []):
+class SyntheticStream(Dataset):
+    """SyntheticStream
+    
+    This dataset simulates synthetic online stream with weighted sampling based on `ClassSamplers` mechanism.
+
+    Parameters
+    ----------
+    n_features
+        Number of features in original dataset 
+    max_samples
+        Number of examples after which datastream will stop sampling
+    seed
+        Seed to initialize the random module for selecting samplers based on their weight
+    init_csamplers
+        List of `ClassSampler` instances that make this stream
+
+    """
+
+    def __init__(self, n_features: int, max_samples: int = None, seed: int = None, init_csamplers: list[ClassSampler] = []):
+        super().__init__(task=MULTI_CLF, n_features=n_features, n_samples=max_samples)
         self._random = Random(seed)
-        self.max_samples = max_samples
         self.active_samplers = dict()
-        self.future_samplers: list(csampler) = []
+        self.future_samplers: list(ClassSampler) = []
         self.t = 0 
         self.all_labels_set: set(str) = set()
 
@@ -23,14 +41,23 @@ class SyntheticStream:
         self.last_label = None
         
         for csampler in init_csamplers: 
-            self.add_sampler(csampler)
+            self._add_sampler(csampler)
             
+        # Used by river.datasets.base.Dataset
+        # But can be calculated after all csamplers have been added
+        self.n_classes = len(self.all_labels_set)
+        
+    def __csampler_to_dict(self, csampler: ClassSampler):
+        cs_dict = {}
+        cs_dict["Label"] = csampler.label
+        cs_dict["NumSamples"] = len(csampler.sample_list)
+        cs_dict["StreamStartIdx"] = csampler.stream_t_start
+        cs_dict["MaxSamples"] = csampler.max_samples
+        cs_dict["EOCStrategy"] = csampler.eoc_strategy
+        return cs_dict
+        
     @property
-    def task(self):
-        return MULTI_CLF
-
-    @property
-    def _repr_content(self):
+    def _repr_content(self) -> dict:
         """The items that are displayed in the __repr__ method.
 
         This property can be overridden in order to modify the output of the __repr__ method.
@@ -40,9 +67,42 @@ class SyntheticStream:
         content = {}
         content["Name"] = self.__class__.__name__
         content["Task"] = self.task
-        content["Samples"] = self.max_samples
+        if self.n_samples is None:
+            content["Samples"] = f"inf"
+        else:
+            content["Samples"] = f"{self.n_samples:,}"
+        content["Classes"] = f"{self.n_classes:,}"
+        content["ActiveClassSamplers"] = [ 
+            self.__csampler_to_dict(csampler) 
+            for csampler in self.active_samplers.values() 
+        ] 
+        content["FutureClassSamplers"] = [
+            self.__csampler_to_dict(csampler) 
+            for csampler in self.future_samplers
+        ]
+        
         return content
 
+    def __repr__(self):
+        # Derived from River.datasets.base.Dataset, but modified to parse the nested csampler structure
+        mod_repr_content = self._repr_content
+        mod_repr_content["ActiveClassSamplers"] = f'{len(mod_repr_content["ActiveClassSamplers"]):,}'
+        mod_repr_content["FutureClassSamplers"] = f'{len(mod_repr_content["FutureClassSamplers"]):,}'
+        l_len = max(map(len, mod_repr_content.keys()))
+        r_len = max(map(len, mod_repr_content.values()))
+
+        out = f"{self.desc}\n\n" + "\n".join(
+            k.rjust(l_len) + "  " + v.ljust(r_len) for k, v in mod_repr_content.items()
+        )
+
+        if "Parameters\n    ----------" in self.__doc__:
+            params = re.split(
+                r"\w+\n\s{4}\-{3,}",
+                re.split("Parameters\n    ----------", self.__doc__)[1],
+            )[0].rstrip()
+            out += f"\n\nParameters\n----------{params}"
+
+        return out
 
     def __iter__(self):
         return self
@@ -63,7 +123,7 @@ class SyntheticStream:
     def class_weights(self) -> dict:
         return self.last_class_weights
         
-    def add_sampler(self, csampler: ClassSampler):
+    def _add_sampler(self, csampler: ClassSampler):
         if csampler.stream_t_start < self.t:
             raise ValueError("Trying to add class sampler in the past")
         elif csampler.stream_t_start == self.t:
@@ -107,7 +167,7 @@ class SyntheticStream:
     
     def _advance_state(self):
         # Raise StopIteration to correctly handle `for x in stream` syntax
-        if self.t == self.max_samples:
+        if self.t == self.n_samples:
             raise StopIteration
         
         # Raise Exception if there is no samplers to sample from
