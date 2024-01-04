@@ -21,24 +21,16 @@ class CBCEAdapter(PerClassMetricsMixin, DriftModelAdapterBase[CBCE]):
     
     def _get_drift_detectors(self) -> dict[str, DriftDetector]:
         return self._model.drift_detectors
-    
-    def get_loggable_state(self) -> dict:
-        state = {
-            "class_priors": self._model._class_priors,
-        }
-
-        return self.add_drift_state(state, active_classes=self._model.classifiers.keys())
 
     def _get_inner_classifiers(self) -> dict:
         return self._model.classifiers
     
     def get_loggable_state(self) -> dict:
         state = {
-            "class_priors": self._model._class_priors
+            "class_priors": self._model._class_priors,
         }
 
-        return self.add_per_class_state(state)
-
+        return self.add_drift_state(self.add_per_class_state(state), active_classes=self._model.classifiers.keys())
 
 class ARFAdapter(PerClassMetricsMixin, ModelAdapterBase[ARFClassifier]):
 
