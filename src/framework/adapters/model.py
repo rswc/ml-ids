@@ -16,6 +16,9 @@ class CBCEAdapter(PerClassMetricsMixin, DriftModelAdapterBase[CBCE]):
     @classmethod
     def get_target_class(self):
         return CBCE
+
+    def _warning_detectors_separate(self) -> bool:
+        return False
     
     def _get_drift_prototype(self, model: CBCE):
         return model.drift_detector
