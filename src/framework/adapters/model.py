@@ -36,7 +36,7 @@ class CBCEAdapter(PerClassMetricsMixin, DriftModelAdapterBase[CBCE]):
 
         return self.add_drift_state(self.add_per_class_state(state), active_classes=self._model.classifiers.keys())
 
-class ARFAdapter(PerClassMetricsMixin, ModelAdapterBase[ARFClassifier]):
+class ARFAdapter(PerClassMetricsMixin, DriftModelAdapterBase[ARFClassifier]):
     
     # Params specified in river.tree.HoeffdingTree 
     BASE_ATTRIBUTES_ALL = [
@@ -92,6 +92,23 @@ class ARFAdapter(PerClassMetricsMixin, ModelAdapterBase[ARFClassifier]):
             f"wv.{metric_name}.max": max(wv_metric_values),
             f"wv.{metric_name}.min": min(wv_metric_values)
         }
+        
+    def _warning_detectors_separate(self) -> bool:
+        return True
+        
+    def _get_drift_prototype(self, model: ARFClassifier) -> DriftDetector:
+        return model.drift_detector
+
+    def _get_drift_warning_prototype(self, model: ARFClassifier) -> DriftDetector:
+        return model.warning_detector
+
+    # Required by DriftModelAdapterBase 
+    def _get_drift_detectors(self) -> dict[str, DriftDetector]:
+        return dict(enumerate(self._model._drift_detectors))
+
+    # Required by DriftModelAdapterBase 
+    def _get_drift_warning_detectors(self) -> dict[str, DriftDetector]:
+        return dict(enumerate(self._model._warning_detectors))
 
     def get_loggable_state(self) -> dict:
 
@@ -108,7 +125,7 @@ class ARFAdapter(PerClassMetricsMixin, ModelAdapterBase[ARFClassifier]):
             
         state = { **models_attribs, **wv_stats, **background_attribs }
         
-        return self.add_per_class_state(state)
+        return self.add_drift_state(self.add_per_class_state(state))
 
 
 class RBCAdapter(PerClassMetricsMixin, ModelAdapterBase[ResamplingBaggingClassifier]):
