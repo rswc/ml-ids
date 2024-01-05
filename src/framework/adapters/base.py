@@ -40,7 +40,19 @@ class ModelAdapterBase(abc.ABC, Generic[MODEL]):
         """Call this at the end of each time step, to let the adapter know it needs to update its state."""
 
 class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
-    """Helper extension to support integrating adapters for model's inner drift detector."""
+    """Helper extension to support integrating adapters for model's inner drift detector.
+    Some models use `DriftAndWarningDetector` instances, while others use separate `DriftDetector` instances,
+    designated as "warning" and "drift". This class of adapters support both cases. 
+    
+    Parameters
+    ----------
+    drift_adapter
+        (optional) Class (not instance!) of the drift adapter. If None, disables the drift detector adapter portion.
+    warning_adapter
+        (optional) Class of the warning adapter. If None, assumed to be the same as `drift_adapter`. If the model
+        does not use separate drift and warning detectors, this has no effect.
+    
+    """
 
     def __init__(self, drift_adapter: Type[ModelAdapterBase] = None, warning_adapter: Type[ModelAdapterBase] = None) -> None:
         super().__init__()
@@ -59,15 +71,12 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         self._drift_adapter = drift_adapter
         self._drift_adapters: dict[str, ModelAdapterBase] = dict()
 
+        self._warning_adapter = warning_adapter or drift_adapter
+        self._warning_adapters: dict[str, ModelAdapterBase] = dict()
+
         if warning_adapter is not None and self._get_drift_warning_detectors() is not None:
             print("WARNING: warning_adapter parameter passed to adapter of model which does not separate drift and warning instances. Warning adapter will be ignored.")
-            warning_adapter = None
-        
-        elif warning_adapter is None and self._get_drift_warning_detectors() is not None:
-            warning_adapter = drift_adapter
-
-        self._warning_adapter = warning_adapter
-        self._warning_adapters: dict[str, ModelAdapterBase] = dict()
+            self._warning_adapter = None
     
     def get_parameters(self) -> dict:
         return {
@@ -112,6 +121,18 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         }
 
     def add_drift_state(self, state: dict, active_classes: list[str] = None):
+        """Extend state object with drift detector information.
+        
+        Parameters
+        ----------
+        state
+            State object to be extended.
+        active_classes
+            (optional) If specified, will only log state of detectors corresponding to these labels.
+            This can be useful for model esembles which activate and deactivate certain base classifiers.
+        
+        """
+
         if self._drift_adapter is not None:
             state[f"drift.{self._get_drift_prototype(self._model).__class__.__name__}"] = self.__extract_state(
                 self._drift_adapter,
