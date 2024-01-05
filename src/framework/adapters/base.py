@@ -60,11 +60,11 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         if drift_adapter is None:
             print("WARNING: Drift-detecting model's adapter initialized without specifying drift_adapter. The drift detector's state will not be logged.")
 
-        if not isinstance(drift_adapter, type):
+        if drift_adapter is not None and not isinstance(drift_adapter, type):
             print("WARNING: The drift detector adapter is expected to be a type, not an instance.")
             drift_adapter = drift_adapter.__class__
 
-        if not isinstance(warning_adapter, type):
+        if warning_adapter is not None and not isinstance(warning_adapter, type):
             print("WARNING: The drift detector warning adapter is expected to be a type, not an instance.")
             warning_adapter = warning_adapter.__class__
 
