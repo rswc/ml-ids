@@ -74,7 +74,7 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
         self._warning_adapter = warning_adapter or drift_adapter
         self._warning_adapters: dict[str, ModelAdapterBase] = dict()
 
-        if warning_adapter is not None and self._get_drift_warning_detectors() is not None:
+        if warning_adapter is not None and not self._warning_detectors_separate():
             print("WARNING: warning_adapter parameter passed to adapter of model which does not separate drift and warning instances. Warning adapter will be ignored.")
             self._warning_adapter = None
     
@@ -91,6 +91,10 @@ class DriftModelAdapterBase(Generic[MODEL], ModelAdapterBase[MODEL]):
     @abc.abstractmethod
     def _get_drift_detectors(self) -> dict[str, DriftDetector]:
         """Access the model's drift detector list."""
+
+    @abc.abstractmethod
+    def _warning_detectors_separate(self) -> bool:
+        """Define whether the model uses separate warning and drift detectors or not."""
 
     def _get_drift_warning_prototype(self, model: MODEL) -> DriftDetector:
         """Access the model's "prototype" drift warning detector. This is useful for models which use separate
