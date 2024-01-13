@@ -23,16 +23,18 @@ class BaseRunner:
             metrics: Metrics,
             out_dir: str,
             model_adapter: ModelAdapterBase = None,
+            summary_metric: str = "mean",
             enable_tracker: bool = True,
             project: str = None,
             entity: str = None,
             notes: str = None,
-            tags: list[str] = None
+            tags: list[str] = None,
         ) -> None:
         self.model = model
         self.dataset = dataset
         self.metrics = metrics
         self.out_dir = out_dir
+        self.sumary_metric = summary_metric
         self.entity = entity
         self.project = project
         self.notes = notes
@@ -98,6 +100,7 @@ class ExperimentRunner(BaseRunner):
             out_dir: str,
             name: str = None,
             model_adapter: ModelAdapterBase = None,
+            summary_metric: str = "mean",
             enable_tracker: bool = True,
             project: str = None,
             entity: str = None,
@@ -110,6 +113,7 @@ class ExperimentRunner(BaseRunner):
             metrics=metrics,
             out_dir=out_dir,
             model_adapter=model_adapter,
+            summary_metric=summary_metric,
             enable_tracker=enable_tracker,
             project=project,
             entity=entity,
@@ -133,7 +137,8 @@ class ExperimentRunner(BaseRunner):
             "hyperparameters": self.model._get_params(),
             "dataset": self.dataset._repr_content,
             "metrics": self._metrics_names,
-            "adapter": self.model_adapter.get_parameters() if self.model_adapter else None
+            "adapter": self.model_adapter.get_parameters() if self.model_adapter else None,
+            "summary_metrics": self.sumary_metric,
         }
     
     def run(self):
@@ -153,6 +158,9 @@ class ExperimentRunner(BaseRunner):
 
         print("Metadata available at:", os.path.abspath(self._meta_path))
         print("Metrics log available at:", os.path.abspath(self._metrics_path))
+
+        for metric in self.metrics:
+            wandb.define_metric(extract_metric_name(metric), summary=self.sumary_metric)
 
         with open(self._metrics_path, "x", newline="") as file_metrics:
             writer_metrics = csv.writer(file_metrics)
