@@ -12,10 +12,8 @@ from rbc import ResamplingBaggingClassifier
 from river import metrics
 from river.drift.binary import DDM
 from river.forest import ARFClassifier
-from river.metrics import Recall
 from river.metrics.base import Metrics
 from river.tree import HoeffdingTreeClassifier
-from river.utils import Rolling
 
 OUT_DIR = "./out"
 PROJECT = "features-search"
@@ -42,8 +40,8 @@ if __name__ == "__main__":
     }
     
     features = [ 
-        # (CICIDS2017.Features.DEFAULT, "DEFAULT"),
-        # (CICIDS2017.Features.KURNIABUDI2020, "KURNIABUDI2020"),
+        (CICIDS2017.Features.DEFAULT, "DEFAULT"),
+        (CICIDS2017.Features.KURNIABUDI2020, "KURNIABUDI2020"),
         (CICIDS2017.Features.YULIANTO2019, "YULIANTO2019")
     ]
     
